@@ -14,6 +14,9 @@ dependencies = [
     "python-dotenv>=1.0",
     # pandas as compatibility layer (e.g. for libraries that don't support polars yet)
     "pandas>=2.0",
+    "httpx>=0.28.1",
+    "tenacity>=8.2",
+    "pytz>=2024.1",
 ]
 
 [project.optional-dependencies]
@@ -51,6 +54,11 @@ torchvision = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = [

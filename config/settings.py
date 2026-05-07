@@ -11,7 +11,7 @@ pipeline behaves consistently regardless of where it is invoked from.
 
 from pathlib import Path
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve the project root once at import time.
@@ -70,6 +70,14 @@ class Settings(BaseSettings):
 
     # --- Observability ---
     LOG_LEVEL: str = "INFO"
+
+    # --- Primary S.A. API ---
+    # Credenciales sensibles: repr=False para que no aparezcan en logs ni en str(settings).
+    PRIMARY_USER: str = Field(default="", repr=False)
+    PRIMARY_PASS: str = Field(default="", repr=False)
+    PRIMARY_BASE_URL: str = Field(default="https://matriz.lbo.xoms.com.ar", repr=False)
+    PRIMARY_TIMEOUT: int = 30
+    PRIMARY_MAX_RETRIES: int = 3
 
     # ------------------------------------------------------------------ #
     # Validators                                                           #

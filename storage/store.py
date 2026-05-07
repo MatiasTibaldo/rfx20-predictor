@@ -72,6 +72,19 @@ class DuckDBStore:
         versioned_dir.mkdir(parents=True, exist_ok=True)
         return versioned_dir / f"{name}.parquet"
 
+    def parquet_exists(self, layer: Layer, name: str, version: str = "v1") -> bool:
+        """Return True if the versioned Parquet file already exists on disk.
+
+        Args:
+            layer: Data layer — one of ``raw``, ``processed``, ``features``.
+            name: Logical dataset name.
+            version: Version tag.
+
+        Returns:
+            True if the file exists, False otherwise.
+        """
+        return self._parquet_path(layer, name, version).exists()
+
     def save_parquet(
         self,
         df: pl.DataFrame,
