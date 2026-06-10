@@ -367,6 +367,38 @@ class RFX20CompositionLoader:
         )
         return df
 
+    def load_divisors(self, base_path: Path) -> pl.DataFrame:
+        """Load the RFX20 index divisor series.
+
+        Source file: ``divisores.csv``
+        Format: ``fecha_divisor;divisor`` — dates as DD/MM/YYYY, comma decimal.
+
+        Args:
+            base_path: Root rfx20 directory.
+
+        Returns:
+            Columns: ``date`` (Date), ``divisor`` (Float64). Sorted by ``date``.
+        """
+        fpath = base_path / "divisores.csv"
+        df = (
+            pl.read_csv(
+                fpath,
+                separator=";",
+                decimal_comma=True,
+                schema_overrides={"fecha_divisor": pl.Utf8, "divisor": pl.Float64},
+            )
+            .select(
+                pl.col("fecha_divisor").str.to_date("%d/%m/%Y").alias("date"),
+                pl.col("divisor"),
+            )
+            .sort("date")
+        )
+        logger.info(
+            f"[divisor] {len(df):,} rows | "
+            f"dates {df['date'].min()} → {df['date'].max()}"
+        )
+        return df
+
     def load_dividends(self, base_path: Path) -> pl.DataFrame:
         """Load dividend adjustment events.
 
@@ -386,13 +418,18 @@ class RFX20CompositionLoader:
             pl.read_csv(
                 fpath,
                 separator=";",
-                decimal_comma=True,
                 schema_overrides={
                     "Especie": pl.Utf8,
-                    "Monto": pl.Float64,
+                    "Monto": pl.Utf8,
                     "Fecha de Ajuste": pl.Utf8,
                     "tipo": pl.Utf8,
                 },
+            )
+            .with_columns(
+                pl.col("Monto")
+                .str.replace_all(r"\.", "")
+                .str.replace(",", ".")
+                .cast(pl.Float64)
             )
             .select(
                 pl.col("Especie").alias("ticker"),
@@ -415,11 +452,12 @@ class RFX20CompositionLoader:
     def save_to_raw(self, base_path: Path, store: DuckDBStore) -> None:
         """Persist normalised DataFrames to Parquet via DuckDBStore.
 
-        Saves three datasets under the ``raw`` layer, version ``v1``:
+        Saves four datasets under the ``raw`` layer, version ``v1``:
 
         * ``rfx20_composition`` — from :meth:`load_historica`
         * ``rfx20_spot`` — from :meth:`load_spot_series`
         * ``rfx20_dividends`` — from :meth:`load_dividends`
+        * ``rfx20_divisor`` — from :meth:`load_divisors`
 
         Args:
             base_path: Root rfx20 directory.
@@ -428,10 +466,12 @@ class RFX20CompositionLoader:
         comp_df = self.load_historica(base_path)
         spot_df = self.load_spot_series(base_path)
         div_df = self.load_dividends(base_path)
+        divisor_df = self.load_divisors(base_path)
 
         store.save_parquet(comp_df, layer="raw", name="rfx20_composition", version="v1")
         store.save_parquet(spot_df, layer="raw", name="rfx20_spot", version="v1")
         store.save_parquet(div_df, layer="raw", name="rfx20_dividends", version="v1")
+        store.save_parquet(divisor_df, layer="raw", name="rfx20_divisor", version="v1")
 
         logger.info(
             "[save_to_raw] Done.\n"
@@ -442,5 +482,7 @@ class RFX20CompositionLoader:
             f"{spot_df['date'].min()} → {spot_df['date'].max()}\n"
             f"  rfx20_dividends   : {len(div_df):,} rows | "
             f"{div_df['date'].min()} → {div_df['date'].max()} | "
-            f"{div_df['ticker'].n_unique()} tickers"
+            f"{div_df['ticker'].n_unique()} tickers\n"
+            f"  rfx20_divisor     : {len(divisor_df):,} rows | "
+            f"{divisor_df['date'].min()} → {divisor_df['date'].max()}"
         )

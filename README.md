@@ -95,6 +95,12 @@ print(runs)
 
 ---
 
+## Pipeline monitor (Streamlit)
+
+```bash
+uv run streamlit run app.py
+```
+
 ## Running tests
 
 ```bash
