@@ -52,6 +52,35 @@ splits:
     verified: true
     notes: "Desdoblamiento 7.0947:1. Salió del índice el 2020-12-30, anterior al split."
 
+  - ticker: BYMA
+    date: "2022-07-06"
+    ratio: 10.0
+    source: "base.dividendos2.csv (AC monto=9) + confirmación equipo Primary S.A."
+    in_index: true
+    verified: true
+    type: "ac_split"
+    notes: >
+      Dividendo en acciones de monto 9 (por cada acción se recibieron 9 nuevas).
+      Equivale a split 10:1. El equipo del índice confirmó que se aplicó
+      fórmula de dividendo en lugar de tratamiento de split, licuando la
+      participación. A partir de este evento se estableció la regla:
+      AC con monto >= 1 se trata como split.
+      Tipo en dataset original: AC (no EF ni split puro).
+
+  - ticker: BYMA
+    date: "2024-05-10"
+    ratio: 5.0
+    source: "Excel dividendos en especie (Primary S.A.) + confirmación equipo"
+    in_index: true
+    verified: true
+    type: "split_puro"
+    notes: >
+      Split puro 5:1. No registrado en base.dividendos2.csv — los splits
+      puros se registran manualmente en Excel separado.
+      El mismo día hubo dividendo EF de CRES.
+      Tratamiento: multiplicar cantidades de BYMA en el índice por 5.
+      Pendiente: obtener Excel completo de dividendos en especie.
+
 # Eventos macroeconómicos identificados como falsos positivos en validate_variation.py
 # NO son splits — son movimientos reales del mercado que se documentan para
 # uso como variables dummy en el módulo de feature engineering
@@ -76,3 +105,8 @@ dirty_data:
     value: 260.0
     expected_range: [140.0, 160.0]
     notes: "Precio de apertura anómalo. Close anterior: 142.6. Posible error de feed."
+
+# PENDIENTE
+# Solicitar a Primary S.A. el Excel completo de dividendos en especie
+# que contiene splits manuales no registrados en base.dividendos2.csv.
+# Ejecutar validate_variation.py periódicamente para detectar nuevos eventos.

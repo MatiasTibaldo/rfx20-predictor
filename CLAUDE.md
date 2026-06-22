@@ -273,3 +273,9 @@ El tipo de ajuste aplicado impacta directamente en la interpretación
 de los retornos logarítmicos definidos como variable objetivo. 
 Esta decisión debe declararse explícitamente en la sección de 
 metodología del trabajo final.
+
+### Dividendos AC como splits encubiertos
+- Regla validada con equipo de Primary S.A.: AC con monto >= 1 → tratar como split
+- BYMA tiene dos eventos de este tipo: 06/07/2022 (10:1) y 10/05/2024 (5:1)
+- Ver docs/decisions/dividends_and_splits.md para detalle completo
+- Pendiente: Excel de dividendos en especie con splits manuales
