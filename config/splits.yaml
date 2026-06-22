@@ -1,0 +1,78 @@
+# Splits no ajustados en las series OHLCV descargadas de Primary S.A.
+# Verificado contra fuentes externas (investing.com, digrin.com) y
+# validado empíricamente con validate_variation.py
+#
+# Formato por entrada:
+#   ticker: código del instrumento
+#   date: fecha efectiva del split en la serie (día hábil siguiente al anuncio)
+#   ratio: factor de desdoblamiento (ej: 2.0 significa que 1 acción pasó a ser 2)
+#   source: fuente de verificación
+#   in_index: si el ticker estaba en el RFX20 en esa fecha (impacta Enfoque A)
+#   verified: si fue confirmado manualmente
+#   notes: observaciones adicionales
+
+splits:
+  - ticker: COME
+    date: "2019-08-05"
+    ratio: 1.7
+    source: "investing.com + validate_variation.py"
+    in_index: true
+    verified: true
+    notes: "Desdoblamiento 1.7:1 confirmado. En índice desde 2018-06-29."
+
+  - ticker: COME
+    date: "2025-08-13"
+    ratio: 2.2443
+    source: "investing.com + validate_variation.py"
+    in_index: true
+    verified: true
+    notes: "Desdoblamiento 2.2443:1 (561/250). En índice hasta la fecha."
+
+  - ticker: AGRO
+    date: "2023-11-03"
+    ratio: 12.0
+    source: "validate_variation.py"
+    in_index: false
+    verified: true
+    notes: "Desdoblamiento 12:1. Ingresó al índice el 2024-05-02, posterior al split."
+
+  - ticker: MORI
+    date: "2018-08-01"
+    ratio: 1.8348
+    source: "validate_variation.py"
+    in_index: false
+    verified: true
+    notes: "Desdoblamiento 1.8348:1. Ingresó al índice el 2020-10-01, posterior al split."
+
+  - ticker: MORI
+    date: "2025-09-05"
+    ratio: 7.0947
+    source: "validate_variation.py"
+    in_index: false
+    verified: true
+    notes: "Desdoblamiento 7.0947:1. Salió del índice el 2020-12-30, anterior al split."
+
+# Eventos macroeconómicos identificados como falsos positivos en validate_variation.py
+# NO son splits — son movimientos reales del mercado que se documentan para
+# uso como variables dummy en el módulo de feature engineering
+macro_events:
+  - date: "2019-08-12"
+    description: "Elecciones PASO — derrota inesperada de Macri vs Fernández"
+    tickers_affected: ["BYMA", "EDN", "GGAL", "PAMP", "SUPV", "TGSU2"]
+    direction: "negative"
+    notes: "Caída sistémica del mercado. No requiere ajuste de serie."
+
+  - date: "2023-11-21"
+    description: "Elecciones presidenciales — victoria de Milei"
+    tickers_affected: ["AGRO", "BMA", "METR", "YPFD"]
+    direction: "positive"
+    notes: "Suba sistémica del mercado. No requiere ajuste de serie."
+
+# Datos sucios identificados — a tratar en módulo processing/
+dirty_data:
+  - ticker: BBAR
+    date: "2019-06-11"
+    field: "open"
+    value: 260.0
+    expected_range: [140.0, 160.0]
+    notes: "Precio de apertura anómalo. Close anterior: 142.6. Posible error de feed."

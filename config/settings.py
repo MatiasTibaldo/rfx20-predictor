@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     FEATURES_DIR: Path = _PROJECT_ROOT / "data" / "features"
     RESULTS_DIR: Path = _PROJECT_ROOT / "results"
     DB_PATH: Path = _PROJECT_ROOT / "results" / "experiments.duckdb"
+    SPLITS_CONFIG: Path = _PROJECT_ROOT / "config" / "splits.yaml"
 
     # --- Modelling ---
     PREDICTION_HORIZONS: list[int] = [1, 3, 5]

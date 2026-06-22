@@ -10,3 +10,8 @@ Typical responsibilities:
 - Currency / inflation adjustments (ARS nominal → real if needed).
 - Splitting into train / validation / test sets respecting temporal order.
 """
+
+from .adjustments import SplitAdjuster
+from .splits import SplitEvent, adjust_ticker, load_splits, run
+
+__all__ = ["SplitAdjuster", "SplitEvent", "adjust_ticker", "load_splits", "run"]
