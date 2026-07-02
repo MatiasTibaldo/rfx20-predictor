@@ -7,15 +7,16 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 ## Estado del proyecto — junio 2026
 
 ### Completado
+
 - Nodo 1: Composición histórica (27 tickers, 2018→hoy) — raw/rfx20_composition.parquet
-- Nodo 2: Series OHLCV 27 instrumentos (2018→hoy) — raw/{ticker}_ohlcv.parquet
+- Nodo 2: Series OHLCV 27 instrumentos (2018→hoy) — raw/{ticker}\_ohlcv.parquet
 - App Streamlit: visualización y validación de datos (app.py)
 - Módulo de ajuste por splits: processing/adjustments.py + config/splits.yaml
 - **Nodo 3: Módulo processing/ completo**
   - `processing/filter.py` — flag `in_index` por fecha (no se filtran filas, ver docs/decisions/index_membership_flag.md)
   - `processing/cleaner.py` — corrección datos sucios desde splits.yaml (BBAR 2019-06-11: open 260.0 → 145.25)
   - `processing/returns.py` — retornos log y simples, forward returns horizones [1, 3, 5]
-  - `processing/dummies.py` — flags is_rebalance, is_macro_event, macro_direction
+  - `processing/dummies.py` — flags is_macro_event, macro_direction
   - `processing/wide_long.py` — datasets long y wide (ohlcv_long.parquet, ohlcv_wide.parquet)
   - `processing/reconstruction.py` — reconstrucción índice + corrección cambio de base oct-2023 (ver docs/decisions/base_change_oct2023.md)
   - `processing/pipeline.py` — orquestador ProcessingPipeline (8 pasos)
@@ -23,16 +24,19 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
   - Validación: 14 días con error > 1% reducidos a 8 (máx 3.25%) post-corrección
 
 ### Próximo paso
+
 **Nodo 4: Módulo features/ (ingeniería de features)**
-  - Indicadores técnicos: MA (10, 20, 50), RSI (14), MACD, Bandas de Bollinger
-  - Volatilidad realizada (rolling std de log_return)
-  - Variables dummy ya disponibles: is_rebalance, is_macro_event, macro_direction
-  - Features macroeconómicos: pendiente definir fuente (ver "Decisiones a confirmar")
-  - Diferenciación fraccional: exploración para preservar memoria en modelos ARIMA
-  - Particionamiento temporal train/val/test (70/15/15)
-  - Input: ohlcv_long.parquet — Output: features_long.parquet
+
+- Indicadores técnicos: MA (10, 20, 50), RSI (14), MACD, Bandas de Bollinger
+- Volatilidad realizada (rolling std de log_return)
+- Variables dummy ya disponibles: is_macro_event, macro_direction
+- Features macroeconómicos: pendiente definir fuente (ver "Decisiones a confirmar")
+- Diferenciación fraccional: exploración para preservar memoria en modelos ARIMA
+- Particionamiento temporal train/val/test (70/15/15)
+- Input: ohlcv_long.parquet — Output: features_long.parquet
 
 ### Decisiones clave documentadas
+
 - Ver docs/decisions/ para decisiones metodológicas
 - Variable objetivo: retornos logarítmicos
 - Fuente del índice: spot + reconstruido (para validación cruzada)
@@ -46,12 +50,30 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 - 8 días con error residual (~2-3%) en reconstrucción: pendiente análisis manual (nov-2022, may-2024)
 
 ### Estructura de datos
+
 - data/raw/v1/: Parquets crudos por ticker
 - data/processed/: pendiente (Nodo 3)
 - data/features/: pendiente (Nodo 4)
 - results/: experimentos DuckDB + pipeline_state.json
 - config/splits.yaml: splits confirmados y eventos macro
 - docs/decisions/: registro de decisiones metodológicas
+
+#### data/raw/macro/ — Variables macroeconómicas disponibles
+
+Todos los archivos tienen fechas en formato `YYYY-MM-DD` salvo `lebac.csv` (pendiente normalizar).
+
+| Archivo | Columnas | Frecuencia | Rango | Notas |
+|---------|----------|------------|-------|-------|
+| `i_merval.csv` | date, open, high, low, close | diaria | 2018-01-02 → 2026-07-01 | Índice Merval en ARS |
+| `IPC.csv` | date, ipc_pct | mensual | 2018-01-31 → 2026-05-31 | Variación mensual % (INDEC) |
+| `riesgo_pais.csv` | date, riesgo_pais | diaria | 2018-01-02 → 2026-07-01 | Puntos básicos (347 → 4.362) |
+| `tasa_plazo_fijo.csv` | date, tasa_pf | diaria | 2018-01-02 → 2026-06-30 | TNA % (18.66 → 130.42) |
+| `lebac.csv` | date, value | diaria | 2018-01-02 → 2023-10-31 | Stock de LEBACs — fecha en DD-MM-YYYY pendiente normalizar |
+| `dolar_oficial.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Tipo de cambio oficial BNA |
+| `dolar_bancos.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Promedio bancos privados |
+| `dolar_informal.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Dólar blue |
+| `dolar_mep.csv` | date, compra, venta | diaria | 2018-10-29 → 2026-07-01 | Dólar MEP (compra=venta) |
+| `dolar_ccl.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Contado con liquidación (compra=venta) |
 
 ---
 
@@ -61,6 +83,7 @@ Predicción del Índice ROFEX 20 (RFX20) mediante técnicas de ML y Deep Learnin
 Tesis de Maestría — Universidad Austral. Alumno: Matías Humberto Tibaldo.
 
 Doble objetivo:
+
 1. Herramienta funcional para uso interno en Primary S.A.
 2. Documentación académica a nivel de tesis de maestría
 
@@ -118,11 +141,13 @@ rfx20-predictor/
 ## Stack tecnológico
 
 ### Entorno
+
 - **Python**: gestionado con `uv` (NO usar pip directamente, NO usar conda)
 - Comando para agregar dependencias: `uv add <paquete>`
 - Comando para ejecutar scripts: `uv run python src/...`
 
 ### Datos
+
 - **Datos crudos**: archivos CSV o Parquet en `data/raw/` (inmutables, no modificar)
 - **Procesamiento**: DuckDB como motor principal (`import duckdb`)
 - **Formato intermedio**: Parquet (via `pyarrow` o `polars`)
@@ -130,17 +155,20 @@ rfx20-predictor/
   En ese caso, convertir al final: `df.to_pandas()` desde polars/duckdb
 
 ### Procesamiento y features
+
 - `polars` para transformaciones tabulares en Python
 - `duckdb` para queries, joins y agregaciones sobre Parquet
 - `ta-lib` o `pandas-ta` para indicadores técnicos (a confirmar)
 
 ### Modelos
+
 - Estadísticos: `statsmodels` (ARIMA/SARIMA), `arch` (GARCH)
 - ML: `scikit-learn`, `xgboost`, `lightgbm`
 - DL: `pytorch` (preferido sobre TensorFlow)
 - Optimización de hiperparámetros: `optuna`
 
 ### Evaluación y visualización
+
 - Métricas: `scikit-learn` + funciones propias en `src/rfx20/evaluation/`
 - Visualización: `plotly` (interactivo) o `matplotlib` (estático para tesis)
 
@@ -160,12 +188,12 @@ rfx20-predictor/
 
 ## Contratos entre módulos (interfaces)
 
-| Módulo origen | Módulo destino | Formato de salida |
-|---|---|---|
-| ingestion | features | Parquet en `data/processed/` |
-| features | models | Vista DuckDB o Parquet en `data/processed/` |
-| models | evaluation | Dict con predicciones + metadatos del modelo |
-| evaluation | pipeline | Dict con métricas estandarizadas |
+| Módulo origen | Módulo destino | Formato de salida                            |
+| ------------- | -------------- | -------------------------------------------- |
+| ingestion     | features       | Parquet en `data/processed/`                 |
+| features      | models         | Vista DuckDB o Parquet en `data/processed/`  |
+| models        | evaluation     | Dict con predicciones + metadatos del modelo |
+| evaluation    | pipeline       | Dict con métricas estandarizadas             |
 
 ---
 
@@ -180,7 +208,8 @@ Secundario (a evaluar según resultados): t+30, t+45, t+60 días
 ## Decisiones a confirmar (pendientes)
 
 - [ ] Librería definitiva para indicadores técnicos (`ta-lib` vs `pandas-ta` vs `ta`)
-- [ ] Fuente concreta de datos macro (BCRA API, INDEC, scraping, otro)
+- [x] Fuente concreta de datos macro — archivos CSV en data/raw/macro/ (i_merval, IPC, riesgo_pais, tasa_plazo_fijo, lebac, dolar × 5)
+- [ ] Integración de datos macro al pipeline de features (Nodo 4)
 - [ ] Fuente de datos de eventos corporativos
 - [ ] ¿Se usa MLflow u otra herramienta para tracking de experimentos?
 - [ ] ¿Git + GitHub/GitLab para control de versiones?
@@ -195,32 +224,35 @@ Secundario (a evaluar según resultados): t+30, t+45, t+60 días
 - Modificar archivos en `data/raw/` (son inmutables)
 - Tomar decisiones sobre el horizonte temporal o la variable objetivo
 
-
 ## Decisiones de desarrollo
 
 ### Testing
-- Los módulos de ingestion y procesamiento de datos estáticos conocidos 
+
+- Los módulos de ingestion y procesamiento de datos estáticos conocidos
   NO requieren tests unitarios. Estos datos son normalizados, de procesamiento
   único y raramente se vuelven a ejecutar.
-- Prioridad de recursos: producir código funcional y eficiente por sobre 
+- Prioridad de recursos: producir código funcional y eficiente por sobre
   cobertura de tests en etapas tempranas.
 - EXCEPCIÓN FUTURA: los módulos de modelos, evaluación y pipeline de predicción
   SÍ requerirán tests para garantizar reproducibilidad académica.
 
 ### Performance y recursos
+
 - Preferir Polars sobre pandas en todos los módulos nuevos.
 - Usar DuckDB para queries sobre datos ya persistidos en Parquet.
-- Evitar cargar datasets completos en memoria cuando se puede usar 
+- Evitar cargar datasets completos en memoria cuando se puede usar
   lazy evaluation (pl.scan_csv, pl.lazy()).
-- Los estados intermedios validados se persisten en Parquet y no se 
+- Los estados intermedios validados se persisten en Parquet y no se
   reprocesan salvo cambio explícito de versión.
 
 ### Modularidad
+
 - Cada módulo expone una interfaz clara de entrada/salida.
 - Un cambio interno en un módulo no debe requerir cambios en otros módulos.
 - Las decisiones de diseño no obvias se documentan con comentarios en el código.
 
 ### Flujo de trabajo con Claude
+
 - Consultar antes de tomar decisiones cruciales de arquitectura o metodología.
 - Documentar cada decisión importante en CLAUDE.md o en comentarios del código.
 - Los commits se hacen por módulo completo y validado, no por archivo.
@@ -232,17 +264,18 @@ Secundario (a evaluar según resultados): t+30, t+45, t+60 días
 ### Ajuste de series OHLCV por splits
 
 **Fecha de decisión:** junio 2026  
-**Contexto:** Las series OHLCV descargadas de la API de Primary S.A. 
-(plataforma Matriz) presentan comportamiento inconsistente respecto 
+**Contexto:** Las series OHLCV descargadas de la API de Primary S.A.
+(plataforma Matriz) presentan comportamiento inconsistente respecto
 al ajuste por splits (desdoblamientos de acciones):
 
-**Hallazgo:** Mediante el script `validate_variation.py` se detectaron 
-variaciones diarias mayores al 30% entre el close de un día y el open 
-del siguiente. Se validaron manualmente contra fuentes externas 
+**Hallazgo:** Mediante el script `validate_variation.py` se detectaron
+variaciones diarias mayores al 30% entre el close de un día y el open
+del siguiente. Se validaron manualmente contra fuentes externas
 (investing.com, digrin.com) y se clasificaron en tres categorías:
 
 **Categoría 1 — Splits NO ajustados en la API:**
 Confirmados y registrados en `config/splits.yaml`:
+
 - COME: split 1.7:1 del 05/08/2019 (dentro del período en el índice)
 - COME: split 2.2443:1 del 13/08/2025 (dentro del período en el índice)
 - AGRO: split 12:1 del 03/11/2023 (fuera del período en el índice)
@@ -251,43 +284,47 @@ Confirmados y registrados en `config/splits.yaml`:
 
 **Categoría 2 — Eventos macroeconómicos (falsos positivos):**
 Movimientos reales del mercado, NO requieren ajuste:
+
 - 12/08/2019: caída sistémica post-PASO (derrota Macri vs Fernández)
   Afectados: BYMA, EDN, GGAL, PAMP, SUPV, TGSU2
 - 21/11/2023: suba sistémica post-elecciones presidenciales (victoria Milei)
   Afectados: AGRO, BMA, METR, YPFD
-Estos eventos se marcarán como variables dummy en el módulo de features.
+  Estos eventos se marcarán como variables dummy en el módulo de features.
 
 **Categoría 3 — Datos sucios:**
+
 - BBAR 11/06/2019: precio de apertura anómalo (260.0 vs close anterior 142.6)
   A corregir en el módulo processing/.
 
 **Decisión de ajuste:**
-Se implementó ajuste backward (precio actual como referencia, 
+Se implementó ajuste backward (precio actual como referencia,
 factores aplicados retroactivamente) mediante `processing/adjustments.py`.
-Los parámetros de ajuste se leen desde `config/splits.yaml` para 
+Los parámetros de ajuste se leen desde `config/splits.yaml` para
 permitir actualizaciones sin modificar código.
 
 Se adoptaron dos enfoques según el uso posterior:
-- **Enfoque A** (default): ajustar solo splits donde el ticker 
+
+- **Enfoque A** (default): ajustar solo splits donde el ticker
   participaba del índice RFX20 en la fecha del split.
   Parámetro: `enforce_index_only=True`
 - **Enfoque B**: ajustar todos los splits de la serie completa.
   Parámetro: `enforce_index_only=False`
 
 **Validación empírica:**
-La hipótesis de que la API devuelve series ya ajustadas por dividendos 
-fue verificada inspeccionando visualmente las series de TGSU2 en las 
-fechas de eventos de dividendos registrados en `base.dividendos2.csv` 
-(17/09/2018 y 16/04/2019). No se observaron discontinuidades abruptas, 
+La hipótesis de que la API devuelve series ya ajustadas por dividendos
+fue verificada inspeccionando visualmente las series de TGSU2 en las
+fechas de eventos de dividendos registrados en `base.dividendos2.csv`
+(17/09/2018 y 16/04/2019). No se observaron discontinuidades abruptas,
 confirmando que los dividendos ya están incorporados en los precios.
 
 **Implicancia para la tesis:**
-El tipo de ajuste aplicado impacta directamente en la interpretación 
-de los retornos logarítmicos definidos como variable objetivo. 
-Esta decisión debe declararse explícitamente en la sección de 
+El tipo de ajuste aplicado impacta directamente en la interpretación
+de los retornos logarítmicos definidos como variable objetivo.
+Esta decisión debe declararse explícitamente en la sección de
 metodología del trabajo final.
 
 ### Dividendos AC como splits encubiertos
+
 - Regla validada con equipo de Primary S.A.: AC con monto >= 1 → tratar como split
 - BYMA tiene dos eventos de este tipo: 06/07/2022 (10:1) y 10/05/2024 (5:1)
 - Ver docs/decisions/dividends_and_splits.md para detalle completo

@@ -2,8 +2,12 @@
 # RFX20 Predictor — .gitignore
 # ============================================================
 
-# --- Project data and outputs (never commit raw/processed data) ---
-data/
+# --- Project data and outputs ---
+# Raw data is tracked (irreproducible: Primary S.A. API + manual macro files)
+# Derived/generated layers are excluded
+data/processed/
+data/features/
+data/*.duckdb
 results/
 
 # --- Environment and secrets ---
