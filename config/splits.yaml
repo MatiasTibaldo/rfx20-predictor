@@ -103,8 +103,12 @@ dirty_data:
     date: "2019-06-11"
     field: "open"
     value: 260.0
+    fix: 145.25
     expected_range: [140.0, 160.0]
-    notes: "Precio de apertura anómalo. Close anterior: 142.6. Posible error de feed."
+    notes: >
+      Precio de apertura anómalo. Close anterior: 142.6. Posible error de feed.
+      Validado contra TradingView: open=145.25, high=154.0, low=142.3,
+      close=153.5, vol=482920.
 
 # PENDIENTE
 # Solicitar a Primary S.A. el Excel completo de dividendos en especie

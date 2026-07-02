@@ -43,6 +43,7 @@ _ROOT = Path(__file__).resolve().parent
 _STATE_PATH = _ROOT / "results" / "pipeline_state.json"
 _RAW_V1 = _ROOT / "data" / "raw" / "v1"
 _COMPOSITION_BASE = _ROOT / "data" / "raw" / "rfx20_composition"
+_PROCESSED_V1 = _ROOT / "data" / "processed" / "v1"
 
 _PLOTLY_CONFIG: dict = {"displayModeBar": True, "scrollZoom": True}
 
@@ -193,6 +194,82 @@ def list_ohlcv_tickers() -> list[str]:
         p.stem.replace("_ohlcv", "").upper()
         for p in _RAW_V1.glob("*_ohlcv.parquet")
     )
+
+
+@st.cache_data(ttl=300)
+def load_processed_long() -> pl.DataFrame | None:
+    path = _PROCESSED_V1 / "ohlcv_long.parquet"
+    if not path.exists():
+        return None
+    return pl.read_parquet(path)
+
+
+@st.cache_data(ttl=300)
+def load_processed_wide() -> pl.DataFrame | None:
+    path = _PROCESSED_V1 / "ohlcv_wide.parquet"
+    if not path.exists():
+        return None
+    return pl.read_parquet(path)
+
+
+@st.cache_data(ttl=300)
+def compute_index_reconstruction() -> pl.DataFrame | None:
+    comp_path = _RAW_V1 / "rfx20_composition.parquet"
+    spot_path = _RAW_V1 / "rfx20_spot.parquet"
+    if not comp_path.exists() or not spot_path.exists():
+        return None
+
+    comp = pl.read_parquet(comp_path)
+    spot = pl.read_parquet(spot_path).rename({"value": "spot_value"})
+
+    # reconstructed = Σ(close_i * quantity_i) por fecha
+    # quantity en el parquet ya son unidades del índice (QI = Q/Divisor_base)
+    daily = (
+        comp
+        .with_columns((pl.col("close") * pl.col("quantity")).alias("contrib"))
+        .group_by("date")
+        .agg(pl.col("contrib").sum().alias("reconstructed_index"))
+        .sort("date")
+    )
+
+    # Corrección cambio de base oct-2023 (ver docs/decisions/base_change_oct2023.md)
+    # Las quantities en composición cambiaron el 2023-09-29 pero el spot
+    # cambió el 2023-10-09. Factor exacto: ×10 para el período de brecha.
+    BASE_CHANGE_CORRECTIONS = [
+        {"date_from": "2023-09-29", "date_to": "2023-10-06", "factor": 10.0},
+    ]
+    for correction in BASE_CHANGE_CORRECTIONS:
+        date_from = pl.date(int(correction["date_from"][:4]),
+                            int(correction["date_from"][5:7]),
+                            int(correction["date_from"][8:10]))
+        date_to   = pl.date(int(correction["date_to"][:4]),
+                            int(correction["date_to"][5:7]),
+                            int(correction["date_to"][8:10]))
+        daily = daily.with_columns(
+            pl.when(
+                (pl.col("date") >= date_from) & (pl.col("date") <= date_to)
+            )
+            .then(pl.col("reconstructed_index") * correction["factor"])
+            .otherwise(pl.col("reconstructed_index"))
+            .alias("reconstructed_index")
+        )
+
+    result = (
+        daily
+        .join(spot, on="date", how="inner")
+        .with_columns(
+            (pl.col("reconstructed_index") - pl.col("spot_value")).abs().alias("abs_error"),
+            (
+                (pl.col("reconstructed_index") - pl.col("spot_value")).abs()
+                / pl.col("spot_value") * 100
+            ).alias("pct_error"),
+        )
+        .with_columns(
+            (pl.col("pct_error") > 1.0).alias("flag")
+        )
+        .sort("date")
+    )
+    return result
 
 
 @st.cache_data(ttl=300)
@@ -1471,6 +1548,166 @@ def render_ohlcv_tab() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Processing tab renderer
+# ---------------------------------------------------------------------------
+
+
+def render_processing_tab() -> None:
+    tab_datasets, tab_recon = st.tabs(["Datasets procesados", "Reconstrucción del índice"])
+
+    with tab_datasets:
+        long_df = load_processed_long()
+        wide_df = load_processed_wide()
+
+        if long_df is None and wide_df is None:
+            st.info("No se encontraron datasets procesados. Ejecutar el Nodo 3 primero.")
+        else:
+            c1, c2 = st.columns(2)
+            if long_df is not None:
+                c1.metric("Long format — filas", f"{len(long_df):,}")
+            if wide_df is not None:
+                c2.metric("Wide format — filas", f"{len(wide_df):,}")
+            if long_df is not None:
+                st.subheader("Long format — muestra (100 filas)")
+                st.dataframe(long_df.head(100).to_pandas(), use_container_width=True)
+            if wide_df is not None:
+                st.subheader("Wide format — muestra (50 filas)")
+                st.dataframe(wide_df.head(50).to_pandas(), use_container_width=True)
+
+    with tab_recon:
+        with st.spinner("Calculando reconstrucción del índice..."):
+            rec_df = compute_index_reconstruction()
+
+        if rec_df is None:
+            st.warning(
+                "No se pudo calcular la reconstrucción. "
+                "Verificar que existan rfx20_composition.parquet y rfx20_spot.parquet "
+                "en data/raw/v1/."
+            )
+            return
+
+        flagged_df = rec_df.filter(pl.col("flag"))
+        n_reconstructed = len(rec_df)
+        n_with_spot = rec_df.filter(pl.col("spot_value").is_not_null()).height
+        mean_pct_error = float(rec_df["pct_error"].mean())
+        n_flagged = len(flagged_df)
+
+        # --- 4 metrics ---
+        mc1, mc2, mc3, mc4 = st.columns(4)
+        mc1.metric("Días reconstruidos", f"{n_reconstructed:,}")
+        mc2.metric("Días con spot disponible", f"{n_with_spot:,}")
+        mc3.metric("Error porcentual medio", f"{mean_pct_error:.4f}%")
+        mc4.metric(
+            "Días flaggeados (error > 1%)",
+            f"{n_flagged:,}",
+            delta="⚠ revisar" if n_flagged > 0 else None,
+            delta_color="inverse",
+        )
+
+        # --- Range selector ---
+        recon_range = st.radio(
+            "Rango temporal",
+            ["3M", "6M", "1Y", "3Y", "MAX"],
+            index=4,
+            horizontal=True,
+            key="recon_range",
+        )
+        rec_f = _range_filter(rec_df, recon_range)
+        dates = rec_f["date"].to_list()
+        reconstructed = rec_f["reconstructed_index"].to_list()
+        spot_vals = rec_f["spot_value"].to_list()
+        pct_err = rec_f["pct_error"].to_list()
+        flags = rec_f["flag"].to_list()
+
+        # --- Chart 1: dual line + flag markers (420px) ---
+        fig1 = go.Figure()
+        fig1.add_trace(go.Scatter(
+            x=dates, y=reconstructed,
+            mode="lines",
+            line=dict(color="#3498db", width=1.5),
+            name="Reconstruido (Σ close×qty)",
+            hovertemplate="%{x}: %{y:,.2f}<extra>Reconstruido (Σ close×qty)</extra>",
+        ))
+        fig1.add_trace(go.Scatter(
+            x=dates, y=spot_vals,
+            mode="lines",
+            line=dict(color="#2ecc71", width=1.5, dash="dot"),
+            name="Spot oficial",
+            hovertemplate="%{x}: %{y:,.2f}<extra>Spot oficial</extra>",
+        ))
+        flag_dates = [d for d, f in zip(dates, flags) if f]
+        flag_recon = [r for r, f in zip(reconstructed, flags) if f]
+        n_flag_visible = len(flag_dates)
+        if flag_dates:
+            fig1.add_trace(go.Scatter(
+                x=flag_dates, y=flag_recon,
+                mode="markers",
+                marker=dict(color="#e74c3c", symbol="x", size=8),
+                name=f"Desvío > 1% ({n_flag_visible} días)",
+                hovertemplate="%{x}<extra>Desvío > 1%</extra>",
+            ))
+        fig1.update_layout(
+            title="Índice reconstruido vs spot",
+            xaxis_title="Fecha",
+            yaxis_title="Valor del índice",
+            hovermode="x unified",
+            height=420,
+            margin=dict(l=0, r=0, t=20, b=0),
+        )
+        st.plotly_chart(fig1, use_container_width=True, config=_PLOTLY_CONFIG)
+
+        # --- Chart 2: pct_error area (250px, color #e67e22) ---
+        fig2 = go.Figure()
+        fig2.add_trace(go.Scatter(
+            x=dates, y=pct_err,
+            mode="lines",
+            fill="tozeroy",
+            line=dict(color="#e67e22", width=1.2),
+            fillcolor="rgba(230,126,34,0.20)",
+            name="Error %",
+            hovertemplate="%{x}: %{y:.3f}%<extra></extra>",
+        ))
+        fig2.add_hline(
+            y=1.0,
+            line_dash="dash",
+            line_color="#e74c3c",
+            line_width=1.5,
+            annotation_text="Umbral 1%",
+            annotation_position="top right",
+            annotation_font=dict(color="#e74c3c", size=10),
+        )
+        fig2.update_layout(
+            xaxis_title="Fecha",
+            yaxis_title="Error (%)",
+            hovermode="x unified",
+            height=250,
+            margin=dict(l=0, r=0, t=10, b=0),
+            showlegend=False,
+        )
+        st.plotly_chart(fig2, use_container_width=True, config=_PLOTLY_CONFIG)
+
+        # --- Table of flagged days ---
+        st.subheader("Días flaggeados (error > 1%)")
+        if flagged_df.is_empty():
+            st.success(
+                "✅ Ningún día supera el 1% de desviación. "
+                "Los precios calculados son consistentes con el spot oficial."
+            )
+        else:
+            st.dataframe(
+                flagged_df
+                .select(["date", "reconstructed_index", "spot_value", "abs_error", "pct_error"])
+                .sort("pct_error", descending=True)
+                .to_pandas(),
+                use_container_width=True,
+            )
+            st.caption(
+                "Estos días son candidatos a tener un split no detectado o un error "
+                "en la composición histórica. Revisarlos antes de avanzar al Nodo 4."
+            )
+
+
+# ---------------------------------------------------------------------------
 # Main layout
 # ---------------------------------------------------------------------------
 
@@ -1489,11 +1726,15 @@ def main() -> None:
     if section == "Pipeline":
         render_pipeline_section()
     else:
-        tab_rfx20, tab_ohlcv = st.tabs(["Índice RFX20", "Series OHLCV"])
+        tab_rfx20, tab_ohlcv, tab_proc = st.tabs(
+            ["Índice RFX20", "Series OHLCV", "Procesamiento"]
+        )
         with tab_rfx20:
             render_rfx20_tab()
         with tab_ohlcv:
             render_ohlcv_tab()
+        with tab_proc:
+            render_processing_tab()
 
 
 if __name__ == "__main__":

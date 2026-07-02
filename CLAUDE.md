@@ -11,16 +11,26 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 - Nodo 2: Series OHLCV 27 instrumentos (2018→hoy) — raw/{ticker}_ohlcv.parquet
 - App Streamlit: visualización y validación de datos (app.py)
 - Módulo de ajuste por splits: processing/adjustments.py + config/splits.yaml
+- **Nodo 3: Módulo processing/ completo**
+  - `processing/filter.py` — flag `in_index` por fecha (no se filtran filas, ver docs/decisions/index_membership_flag.md)
+  - `processing/cleaner.py` — corrección datos sucios desde splits.yaml (BBAR 2019-06-11: open 260.0 → 145.25)
+  - `processing/returns.py` — retornos log y simples, forward returns horizones [1, 3, 5]
+  - `processing/dummies.py` — flags is_rebalance, is_macro_event, macro_direction
+  - `processing/wide_long.py` — datasets long y wide (ohlcv_long.parquet, ohlcv_wide.parquet)
+  - `processing/reconstruction.py` — reconstrucción índice + corrección cambio de base oct-2023 (ver docs/decisions/base_change_oct2023.md)
+  - `processing/pipeline.py` — orquestador ProcessingPipeline (8 pasos)
+  - `processing/runner.py` — entry point para Streamlit pipeline
+  - Validación: 14 días con error > 1% reducidos a 8 (máx 3.25%) post-corrección
 
 ### Próximo paso
-- Nodo 3: Módulo processing/ completo
-  - Filtro por participación en índice (Enfoque A y B)
-  - Aplicación de ajustes de splits (COME obligatorio)
-  - Cálculo de retornos logarítmicos y simples
-  - Dataset wide y long format persistidos en processed/
-  - Limpieza de dato sucio BBAR 11/06/2019
-  - Variables dummy de rebalanceo y eventos macro
-  - Reconstrucción del índice desde OHLCV para validar vs spot
+**Nodo 4: Módulo features/ (ingeniería de features)**
+  - Indicadores técnicos: MA (10, 20, 50), RSI (14), MACD, Bandas de Bollinger
+  - Volatilidad realizada (rolling std de log_return)
+  - Variables dummy ya disponibles: is_rebalance, is_macro_event, macro_direction
+  - Features macroeconómicos: pendiente definir fuente (ver "Decisiones a confirmar")
+  - Diferenciación fraccional: exploración para preservar memoria en modelos ARIMA
+  - Particionamiento temporal train/val/test (70/15/15)
+  - Input: ohlcv_long.parquet — Output: features_long.parquet
 
 ### Decisiones clave documentadas
 - Ver docs/decisions/ para decisiones metodológicas
@@ -31,6 +41,9 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 - Gaps en datos: consultar caso a caso (no asumir estrategia fija)
 - Tests sin prioridad en esta etapa (revisar al llegar a modelos)
 - Formato procesado: wide + long persistidos, cada modelo elige
+- Flag in_index: conservar toda la serie histórica, marcar membresía con bool (ver docs/decisions/index_membership_flag.md)
+- Cambio de base oct-2023: corrección ×10 en capa de procesamiento para 2023-09-29 a 2023-10-06 (ver docs/decisions/base_change_oct2023.md)
+- 8 días con error residual (~2-3%) en reconstrucción: pendiente análisis manual (nov-2022, may-2024)
 
 ### Estructura de datos
 - data/raw/v1/: Parquets crudos por ticker
