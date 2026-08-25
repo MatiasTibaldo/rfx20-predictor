@@ -8,7 +8,7 @@ Master's thesis project — Universidad Austral. Internal tool at Primary S.A.
 
 ---
 
-## Status — June 2026
+## Status — August 2026
 
 | Module | Status |
 |--------|--------|
@@ -16,8 +16,8 @@ Master's thesis project — Universidad Austral. Internal tool at Primary S.A.
 | Nodo 2: OHLCV series ingestion from Primary S.A. API | Done |
 | Split adjustment module (`processing/adjustments.py`) | Done |
 | Streamlit pipeline monitor (`app.py`) | Done |
-| Nodo 3: Processing (returns, alignment, dummies) | In progress |
-| Nodo 4: Feature engineering | Pending |
+| Nodo 3: Processing (returns, alignment, dummies) | Done |
+| Nodo 4: Feature engineering | In progress — Etapas 1-2 done (technical indicators, volatility, macro) |
 | Nodo 5+: Models, evaluation, pipeline | Pending |
 
 ---
@@ -29,14 +29,14 @@ rfx20-predictor/
 ├── config/             # Pydantic settings + splits.yaml (confirmed splits & macro events)
 ├── storage/            # DuckDB + Parquet persistence layer
 ├── ingestion/          # Raw data acquisition from Primary S.A. API
-├── processing/         # OHLCV cleaning, split adjustments (Nodo 3 in progress)
-├── features/           # Feature engineering (pending)
+├── processing/         # OHLCV cleaning, split adjustments (Nodo 3, done)
+├── features/           # Feature engineering (Etapas 1-2 done: technical, macro)
 ├── models/
 │   ├── statistical/    # ARIMA, GARCH baselines
 │   ├── ml/             # XGBoost, LightGBM, RF
 │   └── deep_learning/  # LSTM, Transformer (requires [cpu] or [colab])
 ├── evaluation/         # Metrics, backtesting (pending)
-├── scripts/            # Utility scripts (validate_variation.py)
+├── scripts/            # Utility scripts (validate_variation.py, fetch_rfx20_futures.py)
 ├── docs/
 │   └── decisions/      # Methodological decision records for the thesis
 ├── data/
@@ -44,13 +44,14 @@ rfx20-predictor/
 │   ├── processed/      # Cleaned, adjusted datasets (output of Nodo 3)
 │   └── features/       # Engineered feature sets (output of Nodo 4)
 ├── results/            # Experiment DuckDB + pipeline_state.json
-├── notebooks/          # Exploratory analysis
+├── notebooks/          # Exploratory analysis (empty for now)
 ├── tests/              # Test suite
-├── app.py              # Streamlit pipeline monitor
-└── main.py             # Pipeline entry point
+└── app.py              # Streamlit pipeline monitor
 ```
 
-> `data/` and `results/` are excluded from version control.
+> `data/raw/` is tracked in git (irreproducible: Primary S.A. API + manual
+> macro files). `data/processed/`, `data/features/`, and `results/` are
+> generated/derived layers and excluded from version control.
 
 ---
 
@@ -81,11 +82,12 @@ uv sync --extra colab
 
 ### API credentials
 
-Create a `.env` file at the project root with your Primary S.A. credentials:
+Create a `.env` file at the project root with your Primary S.A. credentials
+(see `.env.example`):
 
 ```bash
-PRIMARY_API_KEY=your_key_here
-PRIMARY_API_SECRET=your_secret_here
+PRIMARY_USER=your_username
+PRIMARY_PASS=your_password
 ```
 
 ---

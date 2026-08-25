@@ -125,41 +125,42 @@ Interfaces entre módulos: archivos Parquet en `data/` o vistas DuckDB.
 
 ## Estructura del proyecto
 
+Layout real (plano en la raíz, sin paquete `src/` — cada nodo del pipeline
+es su propio paquete de nivel superior):
+
 ```
 rfx20-predictor/
 ├── CLAUDE.md                  # Este archivo
 ├── README.md
 ├── pyproject.toml             # Gestionado con uv
 ├── .python-version
+├── app.py                     # Streamlit: monitor de pipeline + validación de datos
+│
+├── config/                    # Settings (Pydantic) + splits.yaml
+├── storage/                   # DuckDBStore: persistencia Parquet + tracking de experimentos
+├── ingestion/                 # Nodo 1-2: composición, OHLCV, futuros RFX20
+├── processing/                # Nodo 3: limpieza, ajustes, retornos, reconstrucción — completo
+├── features/                  # Nodo 4: indicadores técnicos, volatilidad, macro — por etapas
+├── models/
+│   ├── statistical/           # ARIMA, GARCH — pendiente (Bloque 2)
+│   ├── ml/                    # XGBoost, LightGBM, RF, SVM — pendiente
+│   └── deep_learning/         # LSTM, GRU, híbridos — pendiente (extra [cpu]/[colab])
+├── evaluation/                # Métricas y backtesting — pendiente
 │
 ├── data/
-│   ├── raw/                   # Datos crudos tal como llegan (solo lectura)
-│   │   ├── ohlcv/             # Series RFX20 y acciones componentes
-│   │   ├── macro/             # Variables macroeconómicas (BCRA, INDEC, etc.)
-│   │   └── corporate/        # Eventos corporativos (dividendos, splits)
-│   ├── processed/             # Parquet limpios, listos para features
-│   └── rfx20.duckdb           # Base DuckDB con datos procesados y features
+│   ├── raw/                   # Datos crudos, TRACKEADOS en git (irreproducibles)
+│   │   ├── v1/                 # OHLCV por ticker + composición + spot + futuros (csv+parquet)
+│   │   ├── macro/               # CSVs macroeconómicos (dólares, tasas, IPC, riesgo país)
+│   │   └── rfx20_composition/  # Carteras históricas, divisores, dividendos
+│   ├── processed/             # Output Nodo 3 (git-ignored, se regenera)
+│   └── features/              # Output Nodo 4 (git-ignored, se regenera; parquet + csv hermano)
 │
-├── src/
-│   └── rfx20/
-│       ├── __init__.py
-│       ├── ingestion/         # Módulo 1: carga y limpieza de datos crudos
-│       ├── features/          # Módulo 2: ingeniería de features
-│       ├── models/            # Módulo 3: implementación de modelos
-│       │   ├── statistical/   # ARIMA, GARCH
-│       │   ├── ml/            # XGBoost, LightGBM, RF, SVM
-│       │   └── dl/            # LSTM, GRU, híbridos
-│       ├── evaluation/        # Módulo 4: métricas y backtesting
-│       └── pipeline/          # Módulo 5: orquestación end-to-end
-│
-├── notebooks/                 # Exploración y análisis (no producción)
-│   ├── 01_eda/
-│   ├── 02_features/
-│   └── 03_experiments/
-│
-├── tests/                     # Tests unitarios por módulo
-├── docs/                      # Documentación técnica y de tesis
-└── outputs/                   # Resultados, gráficos, reportes generados
+├── results/                   # experiments.duckdb + pipeline_state.json (git-ignored)
+├── scripts/                   # Utilidades manuales (validate_variation.py, fetch_rfx20_futures.py)
+├── notebooks/                 # Exploración — vacío por ahora, sin estructura fija todavía
+├── tests/                     # Tests unitarios (hoy solo ingestion; ver "Decisiones de desarrollo")
+└── docs/
+    └── decisions/              # Registro de decisiones metodológicas — fuente para la tesis
 ```
 
 ---
