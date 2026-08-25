@@ -49,9 +49,18 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
   (incluye un bug de `full join` + `join_asof` encontrado y corregido) y
   `docs/decisions/futures_implied_rate.md`. Output:
   `data/features/v1/macro.parquet`.
-- **Pendiente:** diferenciación fraccional (exploración acotada),
-  particionamiento temporal train/val/test (70/15/15) + consolidación en
-  `features_long.parquet`.
+- **Etapa 3 (completa, agosto 2026):** exploración de diferenciación
+  fraccional (FFD, López de Prado, implementado a mano) sobre el
+  log-precio del índice. Hallazgo: **d=0.35** es el mínimo que logra
+  estacionariedad (ADF p=0.0165), conservando correlación 0.56 con la
+  serie original vs. 0.03 de la diferenciación completa (d=1, el
+  log-return actual). No se productiviza todavía — queda para retomar si
+  el Track A de Bloque 2 (ARIMA/SARIMA) la necesita. Ver
+  `docs/decisions/fractional_differentiation.md`. Script:
+  `scripts/fractional_diff_exploration.py` (exploratorio, no es un nodo
+  del pipeline).
+- **Pendiente:** particionamiento temporal train/val/test (70/15/15) +
+  consolidación en `features_long.parquet`.
 - Variables dummy ya disponibles: is_macro_event, macro_direction
 
 ### Decisiones clave documentadas

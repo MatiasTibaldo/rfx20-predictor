@@ -91,24 +91,28 @@ el siguiente. Progreso:
   futuros RFX20. Ver `docs/decisions/macro_features_etapa2.md`. Código
   nuevo: `ingestion/futures.py`, `scripts/fetch_rfx20_futures.py`,
   `features/macro.py`. Output intermedio: `data/features/v1/macro.parquet`.
-- **Etapas siguientes (pendientes):** diferenciación fraccional (tarea 4),
-  particionamiento temporal + consolidación en `features_long.parquet`
-  (tarea 5).
+- **Etapa 3 (tarea 4, completa 25 ago 2026):** exploración de
+  diferenciación fraccional (FFD, López de Prado, a mano). d=0.35 mínimo
+  estacionario, correlación 0.56 vs. 0.03 del log-return completo. No se
+  productiviza — queda para Track A de Bloque 2 si hace falta. Ver
+  `docs/decisions/fractional_differentiation.md`. Script:
+  `scripts/fractional_diff_exploration.py`.
+- **Etapa siguiente (pendiente):** particionamiento temporal +
+  consolidación en `features_long.parquet` (tarea 5) — cierra Bloque 1.
 
 **Decisiones ya resueltas** (detalle en la sección anterior y en `CLAUDE.md`):
 librería de indicadores técnicos (`ta`), tracking de experimentos (MLflow + DuckDB),
 lag de publicación del IPC, dividendos en especie, URL y tasa implícita de futuros
 RFX20, BADLAR/TAMAR.
 
-**Sigue pendiente:** diferenciación fraccional (exploración acotada) y
-particionamiento temporal 70/15/15 (tareas 4-5).
+**Sigue pendiente:** particionamiento temporal 70/15/15 (tarea 5).
 
 **Tareas técnicas:**
 
 1. ~~Indicadores técnicos: MA(10,20,50), RSI(14), MACD, Bandas de Bollinger~~ — Etapa 1, completa
 2. ~~Volatilidad realizada (rolling std de `log_return`)~~ — Etapa 1, completa
 3. ~~Features macro transformados: term spread, spreads cambiarios múltiples, tasa implícita de futuros~~ — Etapa 2, completa
-4. Diferenciación fraccional — exploración acotada, no bloqueante
+4. ~~Diferenciación fraccional — exploración acotada, no bloqueante~~ — Etapa 3, completa
 5. Particionamiento temporal 70/15/15 + `features_long.parquet`
 
 ### Bloque 2 — Modelos en paralelo (11 sep – 29 oct)
