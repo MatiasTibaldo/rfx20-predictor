@@ -25,15 +25,34 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 
 ### Próximo paso
 
-**Nodo 4: Módulo features/ (ingeniería de features)**
+**Nodo 4: Módulo features/ (ingeniería de features) — se construye por etapas**
 
-- Indicadores técnicos: MA (10, 20, 50), RSI (14), MACD, Bandas de Bollinger
-- Volatilidad realizada (rolling std de log_return)
+- **Etapa 1 (completa, agosto 2026):** indicadores técnicos (MA 10/20/50,
+  RSI 14, MACD, Bandas de Bollinger) y volatilidad realizada (rolling std de
+  log_return, ventanas 10/20/50), calculados sobre los 27 componentes
+  (`features/technical.py`, `features/volatility.py`) **y** sobre la propia
+  serie del índice RFX20 (`rfx20_spot.parquet`). Incluye además la
+  construcción del target del índice (`features/target.py`:
+  `log_return_fwd_{1,3,5}` del RFX20, no existía antes). Ver
+  `docs/decisions/technical_indicators_scope.md` para el razonamiento
+  completo. Orquestado por `features/pipeline.py::FeaturesPipeline`, entry
+  point `features/runner.py`. Output: `data/features/v1/technical_components_long.parquet`
+  y `data/features/v1/technical_index.parquet` (intermedios — el
+  `features_long.parquet` final del plan original se arma en una etapa
+  posterior, al sumar macro).
+- **Etapa 2 (completa, agosto 2026):** features macro — spreads cambiarios
+  (oficial/informal/mep/ccl, sobre `venta`), riesgo país, tasa de plazo
+  fijo, BADLAR, TAMAR, IPC con lag de publicación, y tasa implícita + term
+  spread de futuros RFX20 (`ingestion/futures.py` + `features/macro.py`).
+  Todo alineado por `join_asof(strategy="backward")` sobre el calendario
+  del índice (1955 fechas). Ver `docs/decisions/macro_features_etapa2.md`
+  (incluye un bug de `full join` + `join_asof` encontrado y corregido) y
+  `docs/decisions/futures_implied_rate.md`. Output:
+  `data/features/v1/macro.parquet`.
+- **Pendiente:** diferenciación fraccional (exploración acotada),
+  particionamiento temporal train/val/test (70/15/15) + consolidación en
+  `features_long.parquet`.
 - Variables dummy ya disponibles: is_macro_event, macro_direction
-- Features macroeconómicos: pendiente definir fuente (ver "Decisiones a confirmar")
-- Diferenciación fraccional: exploración para preservar memoria en modelos ARIMA
-- Particionamiento temporal train/val/test (70/15/15)
-- Input: ohlcv_long.parquet — Output: features_long.parquet
 
 ### Decisiones clave documentadas
 
@@ -51,16 +70,22 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 
 ### Estructura de datos
 
-- data/raw/v1/: Parquets crudos por ticker
-- data/processed/: pendiente (Nodo 3)
-- data/features/: pendiente (Nodo 4)
+- data/raw/v1/: Parquets crudos por ticker + rfx20_futures.parquet (futuros RFX20, MatbaRofex)
+- data/processed/: ohlcv_long.parquet, ohlcv_wide.parquet (Nodo 3, completo)
+- data/features/v1/: technical_components_long.parquet, technical_index.parquet
+  (Nodo 4 Etapa 1 — indicadores técnicos, volatilidad, target del índice) +
+  macro.parquet (Nodo 4 Etapa 2 — spreads, tasas, IPC con lag, futuros).
+  Cada uno tiene un .csv hermano (mismo nombre, misma carpeta) para validación
+  manual — `DuckDBStore.save_parquet(..., also_csv=True)`, activado en
+  `features/pipeline.py`. Parquet sigue siendo la interfaz real entre
+  módulos; el CSV es solo una copia de lectura para inspección humana.
 - results/: experimentos DuckDB + pipeline_state.json
 - config/splits.yaml: splits confirmados y eventos macro
 - docs/decisions/: registro de decisiones metodológicas
 
 #### data/raw/macro/ — Variables macroeconómicas disponibles
 
-Todos los archivos tienen fechas en formato `YYYY-MM-DD` salvo `lebac.csv` (pendiente normalizar).
+Todos los archivos tienen fechas en formato `YYYY-MM-DD`.
 
 | Archivo | Columnas | Frecuencia | Rango | Notas |
 |---------|----------|------------|-------|-------|
@@ -68,12 +93,13 @@ Todos los archivos tienen fechas en formato `YYYY-MM-DD` salvo `lebac.csv` (pend
 | `IPC.csv` | date, ipc_pct | mensual | 2018-01-31 → 2026-05-31 | Variación mensual % (INDEC) |
 | `riesgo_pais.csv` | date, riesgo_pais | diaria | 2018-01-02 → 2026-07-01 | Puntos básicos (347 → 4.362) |
 | `tasa_plazo_fijo.csv` | date, tasa_pf | diaria | 2018-01-02 → 2026-06-30 | TNA % (18.66 → 130.42) |
-| `lebac.csv` | date, value | diaria | 2018-01-02 → 2023-10-31 | Stock de LEBACs — fecha en DD-MM-YYYY pendiente normalizar |
 | `dolar_oficial.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Tipo de cambio oficial BNA |
 | `dolar_bancos.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Promedio bancos privados |
 | `dolar_informal.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Dólar blue |
 | `dolar_mep.csv` | date, compra, venta | diaria | 2018-10-29 → 2026-07-01 | Dólar MEP (compra=venta) |
 | `dolar_ccl.csv` | date, compra, venta | diaria | 2018-01-02 → 2026-07-01 | Contado con liquidación (compra=venta) |
+| `badlar.csv` | Fecha, Valor BADLAR (%) | diaria | 2018-01-02 → 2026-08-21 | Tasa BADLAR bancos privados. Validada (sin nulls/duplicados, 2 gaps de feriados) |
+| `tamar.csv` | Fecha, Valor TAMAR (%) | diaria | 2024-10-01 → 2026-08-21 | Tasa TAMAR (ex-LELIQ). Arranca ~10 meses después de la discontinuación de LELIQ (dic-2023) — gap real de la serie, no error |
 
 ---
 
@@ -158,7 +184,7 @@ rfx20-predictor/
 
 - `polars` para transformaciones tabulares en Python
 - `duckdb` para queries, joins y agregaciones sobre Parquet
-- `ta-lib` o `pandas-ta` para indicadores técnicos (a confirmar)
+- `ta` para indicadores técnicos (MA, RSI, MACD, Bollinger)
 
 ### Modelos
 
@@ -207,12 +233,30 @@ Secundario (a evaluar según resultados): t+30, t+45, t+60 días
 
 ## Decisiones a confirmar (pendientes)
 
-- [ ] Librería definitiva para indicadores técnicos (`ta-lib` vs `pandas-ta` vs `ta`)
-- [x] Fuente concreta de datos macro — archivos CSV en data/raw/macro/ (i_merval, IPC, riesgo_pais, tasa_plazo_fijo, lebac, dolar × 5)
-- [ ] Integración de datos macro al pipeline de features (Nodo 4)
-- [ ] Fuente de datos de eventos corporativos
-- [ ] ¿Se usa MLflow u otra herramienta para tracking de experimentos?
-- [ ] ¿Git + GitHub/GitLab para control de versiones?
+- [x] Librería definitiva para indicadores técnicos → **`ta`** (agosto 2026). Se
+  descartó `pandas-ta` porque requiere Python >=3.12 y el proyecto está fijado en
+  3.11 (`.python-version`); no se cambia la versión de Python sin consultarlo antes.
+  `ta-lib` descartado por requerir compilación de dependencias nativas. Instalado
+  con `uv add ta` — ver `pyproject.toml`.
+- [x] Fuente concreta de datos macro — archivos CSV en data/raw/macro/ (i_merval, IPC, riesgo_pais, tasa_plazo_fijo, badlar, tamar, dolar × 5)
+- [x] Integración de datos macro al pipeline de features (Nodo 4) → **resuelto (Etapa 2, 25 agosto 2026)**,
+  ver `features/macro.py` y `docs/decisions/macro_features_etapa2.md`.
+- [x] Fuente de datos de eventos corporativos — `base.dividendos2.csv` + `Cartera Historica/`. El Excel de dividendos en especie
+  no se persigue más (agosto 2026): impacto en precio inmaterial, ver `docs/decisions/dividends_and_splits.md` sección 4.
+- [x] ¿Se usa MLflow u otra herramienta para tracking de experimentos? → **Sí, MLflow** (agosto 2026), instalado (`uv add mlflow`,
+  backend local `mlruns/`, sin server). `results/experiments.duckdb` sigue para estado del pipeline y datos; MLflow es
+  específicamente para tracking de runs de modelos a partir de Fase 3.
+- [x] ¿Git + GitHub/GitLab para control de versiones? → Git ya en uso desde el inicio del repo.
+- [x] BADLAR/TAMAR → **resuelto (25 agosto 2026): el alumno sumó `badlar.csv`/`tamar.csv` manualmente** a
+  `data/raw/macro/`, sin pasar por `BCRAConnector.fetch()` (que sigue sin implementar). Validados y consumidos
+  en Etapa 2 de Nodo 4 (`features/macro.py::load_rates_and_risk`). Ver `docs/decisions/macro_features_etapa2.md`.
+- [x] URL de la API pública de futuros RFX20 → **provista por el alumno** (agosto 2026):
+  `https://apicem.matbarofex.com.ar/api/v2/closing-prices?product=RFX20&...`. "Volatilidad implícita" se
+  reinterpreta como **tasa implícita (`impliedRate`) + term spread de la curva de futuros**, ya que RFX20 no
+  tiene mercado de opciones con volumen para calcular una IV real. Ver `docs/decisions/futures_implied_rate.md`.
+  Implementación (ingesta + feature) pendiente para la etapa de macro/futuros de Nodo 4.
+- [ ] **Nuevo (agosto 2026):** lag de publicación del IPC — resuelto con precisión para dic-2023 a may-2026, aproximado
+  para 2018 a nov-2023. Ver `docs/decisions/ipc_publication_lag.md`.
 
 ---
 

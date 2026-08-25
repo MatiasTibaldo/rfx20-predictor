@@ -91,6 +91,7 @@ class DuckDBStore:
         layer: Layer,
         name: str,
         version: str = "v1",
+        also_csv: bool = False,
     ) -> Path:
         """Persist a Polars DataFrame as a Parquet file.
 
@@ -99,9 +100,14 @@ class DuckDBStore:
             layer: Data layer — one of ``raw``, ``processed``, ``features``.
             name: Logical dataset name (e.g. ``"rfx20_ohlcv"``).
             version: Version tag used to namespace the file (e.g. ``"v1"``).
+            also_csv: If True, also write a sibling ``.csv`` file next to the
+                Parquet output (same directory, same name) for quick manual
+                inspection. Parquet remains the interface between modules —
+                the CSV is a human-facing convenience copy only, same
+                pattern already used for the raw OHLCV layer.
 
         Returns:
-            The resolved path where the file was written.
+            The resolved path where the Parquet file was written.
 
         Raises:
             ValueError: If ``layer`` is not a recognised layer name.
@@ -114,6 +120,10 @@ class DuckDBStore:
         try:
             df.write_parquet(path)
             logger.info(f"Saved {len(df):,} rows → {path}")
+            if also_csv:
+                csv_path = path.with_suffix(".csv")
+                df.write_csv(csv_path)
+                logger.info(f"Saved {len(df):,} rows → {csv_path}")
         except Exception as exc:
             logger.error(f"Failed to save parquet [{layer}/{version}/{name}]: {exc}")
             raise
