@@ -10,6 +10,9 @@ data/features/
 data/*.duckdb
 results/
 
+# MLflow local tracking backend (Fase 3+, model experiment runs)
+mlruns/
+
 # --- Environment and secrets ---
 .env
 .envrc

@@ -21,6 +21,8 @@ dependencies = [
     "plotly>=5.20",
     "scipy>=1.17.1",
     "pyyaml>=6.0",
+    "ta>=0.11.0",
+    "mlflow>=3.15.1",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +41,11 @@ colab = [
 ]
 
 [tool.uv]
+# Lock only for Linux: the project runs on Ubuntu (local) and Colab (also Linux).
+# Without this, uv tries to resolve a universal lock including win32/macOS, which
+# breaks on packages (e.g. pandas-ta) with inconsistent per-platform requires-python.
+environments = ["sys_platform == 'linux'"]
+
 # Point to PyTorch CPU wheel index so uv resolves the CPU-only build
 # when installing the [cpu] extra on Linux.
 # Reference: https://pytorch.org/get-started/locally/

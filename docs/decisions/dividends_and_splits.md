@@ -67,11 +67,18 @@ Cartera Historica/) ya tienen las cantidades ajustadas por el equipo
 del índice. No es necesario recalcularlas — son la fuente de verdad 
 para la reconstrucción del índice.
 
-### 4. Pendiente: Excel de dividendos en especie
-Se debe solicitar a Primary S.A. el Excel de dividendos en especie 
-que contiene los splits manuales (como BYMA 2024) no registrados 
-en base.dividendos2.csv. Hasta obtenerlo, validate_variation.py 
-es la herramienta de detección empírica.
+### 4. Resuelto (agosto 2026): no se persigue el Excel de dividendos en especie
+Se evaluó solicitar a Primary S.A. el Excel de dividendos en especie que
+contendría splits manuales adicionales (como BYMA 2024) no registrados en
+`base.dividendos2.csv`. Decisión: **no se persigue esta fuente**. El impacto en
+precio de los dividendos en especie observados hasta ahora es sistemáticamente
+demasiado chico como para mover una vela de forma perceptible — a diferencia de
+los casos AC >= 1 tratados como split encubierto (sección anterior), que sí
+generan un salto de precio detectable. Los casos ya conocidos y con impacto
+material (BYMA 2022 y 2024) están tratados; eventos adicionales no detectados por
+`validate_variation.py` se consideran, por diseño, inmateriales para el análisis y
+quedan fuera de alcance. Este supuesto se declara explícitamente como limitación
+en la sección de metodología de la tesis.
 
 ## Eventos AC con monto >= 1 en el dataset actual
 
