@@ -40,9 +40,20 @@ decisión de seguridad que vale la pena tener registrada.
 - **Divisor** (`divisores.csv`): 12 filas nuevas — solo se agregó una fila
   cuando el valor cambió respecto a la fila anterior (mismo patrón disperso
   del archivo original, no una fila por día).
-- **Cartera Vigente / Proyectada**: un snapshot nuevo de cada una
-  (`nvas_cantidades_20260812.csv`, `proyectada_20260820.csv`), fechados
-  según lo que informa el propio endpoint (`mdEntryDateTime`).
+- **Cartera Vigente / Proyectada**: primero se agregó un solo snapshot de
+  cada una desde `/api/rfx20` (`nvas_cantidades_20260812.csv`,
+  `proyectada_20260820.csv`) — pero eso dejó un hueco: entre el 15-abr
+  (última Vigente pre-backfill) y el 12-ago no había ningún archivo
+  intermedio, pese a que la composición sí cambió en el medio (el alumno
+  detectó esto y preguntó explícitamente). Se corrigió con
+  `scripts/backfill_vigente_changepoints.py`: en vez de pegarle de nuevo a
+  la API, se derivaron los puntos de cambio real comparando la composición
+  día a día en Cartera Historica (ya completa) contra el día anterior — 12
+  cambios detectados, 11 archivos nuevos de Cartera Vigente escritos ahí
+  (el del 12-ago ya existía). Cartera Proyectada **no** se pudo backfillear
+  de la misma forma — es una proyección anunciada hacia adelante en un
+  momento dado, no reconstruible desde el historial de composición
+  efectiva; sigue con un solo snapshot.
 
 Después del backfill se corrió `ingestion.composition_runner` para
 regenerar `data/raw/v1/*.parquet`, y `features.runner` para extender
