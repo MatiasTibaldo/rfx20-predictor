@@ -97,15 +97,23 @@ el siguiente. Progreso:
   productiviza — queda para Track A de Bloque 2 si hace falta. Ver
   `docs/decisions/fractional_differentiation.md`. Script:
   `scripts/fractional_diff_exploration.py`.
-- **Etapa siguiente (pendiente):** particionamiento temporal +
-  consolidación en `features_long.parquet` (tarea 5) — cierra Bloque 1.
+- **Etapa 4 (tarea 5, completa 26 ago 2026) — cierra el Bloque 1:**
+  particionamiento temporal + consolidación en `features_long.parquet`.
+  Test = 86 filas genuinamente nuevas (2026-04-20 → 2026-08-25, out-of-sample
+  real, traídas vía WS de MatbaRofex — ver `docs/decisions/rfx20_ws_backfill.md`).
+  Train/val = split 85/15 sobre el resto (train hasta 2025-01-28, val desde
+  2025-01-29 — incluye todo el régimen post-electoral 2023-2025). Nota para
+  Bloque 2-3: el modelo final se reentrena con el dataset completo antes de
+  producción. Ver `docs/decisions/temporal_split_and_consolidation.md`.
+  Código: `features/temporal_split.py`, `features/consolidate.py`.
+
+**Bloque 1 completo.** Nodo 4 cerrado — las 5 tareas del plan original
+están hechas, por etapas, validadas contra los datos reales en cada paso.
 
 **Decisiones ya resueltas** (detalle en la sección anterior y en `CLAUDE.md`):
 librería de indicadores técnicos (`ta`), tracking de experimentos (MLflow + DuckDB),
 lag de publicación del IPC, dividendos en especie, URL y tasa implícita de futuros
 RFX20, BADLAR/TAMAR.
-
-**Sigue pendiente:** particionamiento temporal 70/15/15 (tarea 5).
 
 **Tareas técnicas:**
 
@@ -113,7 +121,7 @@ RFX20, BADLAR/TAMAR.
 2. ~~Volatilidad realizada (rolling std de `log_return`)~~ — Etapa 1, completa
 3. ~~Features macro transformados: term spread, spreads cambiarios múltiples, tasa implícita de futuros~~ — Etapa 2, completa
 4. ~~Diferenciación fraccional — exploración acotada, no bloqueante~~ — Etapa 3, completa
-5. Particionamiento temporal 70/15/15 + `features_long.parquet`
+5. ~~Particionamiento temporal 70/15/15 + `features_long.parquet`~~ — Etapa 4, completa
 
 ### Bloque 2 — Modelos en paralelo (11 sep – 29 oct)
 

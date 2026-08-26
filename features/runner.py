@@ -39,10 +39,12 @@ def main() -> None:
                 "index_columns": result.index_columns,
                 "macro_rows": result.macro_rows,
                 "macro_columns": result.macro_columns,
+                "features_long_rows": result.features_long_rows,
+                "features_long_columns": result.features_long_columns,
             },
         }
         save_state(state)
-        print("Nodo 4 (Etapas 1-2) completado.")
+        print("Nodo 4 (Etapas 1-4) completado.")
     except Exception as exc:
         state = load_state()
         state["nodes"]["features"] = {"status": "error", "error": str(exc)}

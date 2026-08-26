@@ -1,18 +1,19 @@
 """
-Feature engineering pipeline — Etapas 1-2 (technical indicators + realized
-volatility per component/index, plus macro features).
+Feature engineering pipeline — Etapas 1-4 (technical indicators + realized
+volatility per component/index, macro features, and the final temporal
+train/val/test consolidation).
 
 Orchestrates loading the processed OHLCV layer and the RFX20 spot series,
 computing technical indicators and realized volatility on both, building
 the index-level target, consolidating macro features onto the index's
-trading calendar, and persisting everything to the features layer.
+trading calendar, and joining index + macro + a temporal split into the
+final ``features_long.parquet``.
 
-Deliberately out of scope so far (left for later etapas of Nodo 4, see
-docs/plan_de_accion.md): fractional differentiation and the temporal
-train/val/test partition. Because of that, output is three intermediate
-parquet files rather than the final ``features_long.parquet`` named in the
-original plan — that join happens once the temporal split etapa decides
-the final schema.
+Deliberately out of scope (see docs/decisions/fractional_differentiation.md):
+fractional differentiation stays exploratory, not persisted as a feature —
+and the 27 components stay in their own ``technical_components_long.parquet``
+rather than pivoted into ``features_long.parquet`` (no concrete consumer
+needs that shape yet; see docs/decisions/temporal_split_and_consolidation.md).
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from loguru import logger
 
 from config.settings import settings
 from storage.store import DuckDBStore
+from .consolidate import build_features_long
 from .macro import build_macro_features
 from .target import build_index_target
 from .technical import add_technical_indicators, add_technical_indicators_all
@@ -52,6 +54,8 @@ class FeaturesResult:
     index_columns: int = 0
     macro_rows: int = 0
     macro_columns: int = 0
+    features_long_rows: int = 0
+    features_long_columns: int = 0
     errors: dict[str, str] = field(default_factory=dict)
 
 
@@ -172,6 +176,7 @@ class FeaturesPipeline:
 
         # --- Step 7: Macro features (non-fatal — Etapa 1 outputs stand alone) ---
         logger.info("[features] Step 7: Computing macro features.")
+        macro_df: pl.DataFrame | None = None
         try:
             macro_df = build_macro_features(
                 index_df["date"], store=self._store, version=self._version
@@ -186,9 +191,26 @@ class FeaturesPipeline:
             logger.error(f"[features] Failed to compute macro features: {exc}")
             result.errors["__macro__"] = str(exc)
 
+        # --- Step 8: Consolidate index + macro + temporal split (non-fatal) ---
+        if macro_df is not None:
+            logger.info("[features] Step 8: Consolidating features_long (index + macro + split).")
+            try:
+                features_long = build_features_long(index_df, macro_df)
+                result.features_long_rows = features_long.height
+                result.features_long_columns = len(features_long.columns)
+                self._store.save_parquet(
+                    features_long, layer="features", name="features_long", version=self._version,
+                    also_csv=True,
+                )
+            except Exception as exc:
+                logger.error(f"[features] Failed to build features_long: {exc}")
+                result.errors["__features_long__"] = str(exc)
+        else:
+            logger.warning("[features] Step 8 skipped — macro features unavailable.")
+
         logger.info(
             f"[features] Done — components: {len(result.tickers_processed)} tickers, "
             f"{result.components_rows:,} rows; index: {result.index_rows:,} rows; "
-            f"macro: {result.macro_rows:,} rows."
+            f"macro: {result.macro_rows:,} rows; features_long: {result.features_long_rows:,} rows."
         )
         return result

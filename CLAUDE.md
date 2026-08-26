@@ -59,9 +59,24 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
   `docs/decisions/fractional_differentiation.md`. Script:
   `scripts/fractional_diff_exploration.py` (exploratorio, no es un nodo
   del pipeline).
-- **Pendiente:** particionamiento temporal train/val/test (70/15/15) +
-  consolidación en `features_long.parquet`.
+- **Etapa 4 (completa, 26 agosto 2026) — cierra el Bloque 1:**
+  particionamiento temporal + consolidación en `features_long.parquet`.
+  Test = 86 filas genuinamente nuevas (2026-04-20 → 2026-08-25, traídas vía
+  WS de MatbaRofex — ver `docs/decisions/rfx20_ws_backfill.md`), 100%
+  out-of-sample. Train/val = split 85/15 sobre el resto del historial
+  (2018-04-03 → 2026-04-17): train hasta 2025-01-28, val desde 2025-01-29
+  (incluye todo el régimen post-electoral 2023-2025 que un 70/15/15 puro
+  hubiera dejado afuera de train). **Nota para Bloque 2-3:** el modelo
+  final elegido se reentrena con el dataset completo antes de usarse en
+  producción — el split es una herramienta de selección, no una exclusión
+  permanente. Ver `docs/decisions/temporal_split_and_consolidation.md`.
+  Opción A: `features_long.parquet` = índice + macro + split, sin los 27
+  componentes pivotados (quedan aparte en `technical_components_long.parquet`,
+  cada modelo los usa si los necesita). Código:
+  `features/temporal_split.py`, `features/consolidate.py`.
 - Variables dummy ya disponibles: is_macro_event, macro_direction
+
+**Nodo 4 completo — Bloque 1 del plan de acción cerrado.**
 
 ### Decisiones clave documentadas
 
