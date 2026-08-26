@@ -11,7 +11,10 @@ de nombres de la API solo requiera modificar este archivo.
 
 # Componentes del índice RFX20 (20 acciones líderes del MERVAL).
 # Completar / actualizar según la composición vigente del índice.
-RFX20_TICKERS: list[str] = ['AGRO', 'ALUA', 'APBR', 'BBAR', 'BMA', 'BYMA', 'CEPU', 'COME', 'CRES', 'CVH', 'EDN', 'GGAL', 'IRSA', 'LOMA', 'METR', 'MIRG', 'MORI', 'PAMP', 'SUPV', 'TECO2', 'TGNO4', 'TGSU2', 'TRAN', 'TS', 'TXAR', 'VALO', 'YPFD']
+# ECOG sumada 26-ago-2026: entró a la composición del índice ~2026-05-04
+# (ver docs/decisions/rfx20_ws_backfill.md), no estaba en la lista original
+# de 27 tickers.
+RFX20_TICKERS: list[str] = ['AGRO', 'ALUA', 'APBR', 'BBAR', 'BMA', 'BYMA', 'CEPU', 'COME', 'CRES', 'CVH', 'ECOG', 'EDN', 'GGAL', 'IRSA', 'LOMA', 'METR', 'MIRG', 'MORI', 'PAMP', 'SUPV', 'TECO2', 'TGNO4', 'TGSU2', 'TRAN', 'TS', 'TXAR', 'VALO', 'YPFD']
 
 
 # Resolución temporal diaria que acepta la API de Primary.
