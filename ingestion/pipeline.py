@@ -192,7 +192,9 @@ class IngestionPipeline:
                 )
                 return True
 
-            self._store.save_parquet(df, layer="raw", name=dataset_name, version=version)
+            self._store.save_parquet(
+                df, layer="raw", name=dataset_name, version=version, also_csv=True
+            )
             return True
 
         except AuthError as exc:

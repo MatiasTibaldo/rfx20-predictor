@@ -468,10 +468,10 @@ class RFX20CompositionLoader:
         div_df = self.load_dividends(base_path)
         divisor_df = self.load_divisors(base_path)
 
-        store.save_parquet(comp_df, layer="raw", name="rfx20_composition", version="v1")
-        store.save_parquet(spot_df, layer="raw", name="rfx20_spot", version="v1")
-        store.save_parquet(div_df, layer="raw", name="rfx20_dividends", version="v1")
-        store.save_parquet(divisor_df, layer="raw", name="rfx20_divisor", version="v1")
+        store.save_parquet(comp_df, layer="raw", name="rfx20_composition", version="v1", also_csv=True)
+        store.save_parquet(spot_df, layer="raw", name="rfx20_spot", version="v1", also_csv=True)
+        store.save_parquet(div_df, layer="raw", name="rfx20_dividends", version="v1", also_csv=True)
+        store.save_parquet(divisor_df, layer="raw", name="rfx20_divisor", version="v1", also_csv=True)
 
         logger.info(
             "[save_to_raw] Done.\n"

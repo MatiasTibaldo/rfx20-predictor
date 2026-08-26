@@ -36,7 +36,9 @@ def main() -> None:
     df = connector.fetch("RFX20", args.date_from, args.date_to)
 
     store = DuckDBStore()
-    path = store.save_parquet(df, layer="raw", name="rfx20_futures", version=args.version)
+    path = store.save_parquet(
+        df, layer="raw", name="rfx20_futures", version=args.version, also_csv=True
+    )
 
     logger.info(
         f"rfx20_futures: {len(df):,} filas, "
