@@ -43,7 +43,9 @@ LSTM/GRU, selección final).
   antes y, dado el volumen de corridas que vienen en el Bloque 2 (múltiples
   familias de modelos, grid/random search con CV temporal, en dos tracks
   paralelos), tiene más sentido que reconstruir un esquema a mano en DuckDB.
-  Instalado con `uv add mlflow`, backend local (`mlruns/`, sin server).
+  Instalado con `uv add mlflow`, backend local SQLite (`mlruns.db`, sin server —
+  el backend de archivos plano `mlruns/` quedó en modo mantenimiento a partir de
+  MLflow 3.15, ver `docs/decisions/arima_baseline_track_a.md`).
   `results/experiments.duckdb` sigue a cargo del estado del pipeline y los datos;
   MLflow trackea específicamente las corridas de modelos desde Fase 3.
 - **Lag de publicación del IPC → resuelto con precisión para dic-2023 a may-2026**
@@ -127,9 +129,65 @@ RFX20, BADLAR/TAMAR.
 
 - **Track A (estadístico + ML clásico):** ARIMA/SARIMA + GARCH primero (baseline
   rápido) → SVM, Random Forest, XGBoost, LightGBM con validación cruzada temporal.
-- **Track B (Deep Learning):** ventanas/lookback → LSTM y GRU → evaluación preliminar
-  de TFT/Transformer → híbrido CNN-LSTM. Entrenamientos largos corren de fondo
-  (overnight) sin bloquear el resto del trabajo.
+  Protocolo compartido de los 4 modelos de ML (feature set, CV temporal,
+  permutation importance, principio de no imputar gaps estructurales) en
+  `docs/decisions/ml_feature_engineering_track_a.md`.
+  - **SVM (completo, 5 sep 2026):** empatado con el naive en los 3 horizontes
+    (sin mejora significativa) — segunda confirmación independiente (tras
+    ARIMA) de que no hay señal explotable en la media condicional. Ver
+    `docs/decisions/svm_track_a.md`. Código: `models/ml/common.py`, `models/ml/svm_runner.py`.
+  - **Random Forest (completo, 5 sep 2026):** levemente peor que el naive en los 3
+    horizontes — tercera confirmación (ARIMA, SVM, RF) de ausencia de señal en la
+    media condicional. Sin feature estable en permutation importance entre
+    horizontes. Ver `docs/decisions/rf_track_a.md`. Código: `models/ml/rf_runner.py`.
+  - **XGBoost (completo, 5 sep 2026):** sustancialmente peor que el naive (hasta
+    61% más RMSE en h=1) — sobreajuste sobre dataset chico/ruidoso, sin early
+    stopping en este baseline (queda para Bloque 3 si es candidato de ensemble).
+    Ver `docs/decisions/xgboost_track_a.md`. Código: `models/ml/xgboost_runner.py`.
+    Dependencia agregada: `xgboost` (`uv add xgboost`).
+  - **LightGBM (completo, 5-6 sep 2026) — cierra Track A:** en línea con SVM/RF, sin
+    mejora significativa vs. naive. Bug de threading anidado hizo la corrida ~7h en
+    vez de minutos, corregido para el futuro (no afectó el resultado). Ver
+    `docs/decisions/lightgbm_track_a.md`. Código: `models/ml/lightgbm_runner.py`.
+    Dependencia agregada: `lightgbm` (`uv add lightgbm`).
+
+  **Síntesis de Track A (ARIMA/SARIMA + GARCH + SVM/RF/XGBoost/LightGBM):** seis
+  métodos independientes coinciden en que la dirección del retorno diario del
+  índice no es pronosticable con este feature set en los horizontes 1/3/5 días —
+  motiva explícitamente explorar Track B (Deep Learning). El resultado positivo
+  de GARCH (volatilidad condicional) es el hallazgo central de Bloque 2 hasta el
+  momento. Track A queda completo.
+  - **Etapa 1 (completa, 5 sep 2026):** baseline ARIMA/SARIMA. Orden ganador por
+    AIC: (0,0,0), sin componente estacional — equivalente a predecir la media
+    incondicional, sin estructura AR/MA explotable en el log-return diario del
+    índice. Walk-forward diario sobre val (294/294 refits ok) da métricas
+    idénticas al baseline naive (predecir retorno 0). Resultado negativo válido
+    para la tesis, no una falla de implementación. Ver
+    `docs/decisions/arima_baseline_track_a.md`. Código: `models/statistical/arima.py`,
+    `models/statistical/runner.py`.
+  - **Etapa 2 (completa, 5 sep 2026):** GARCH sobre la volatilidad condicional.
+    Comparación experimental Normal vs. t-Student por AIC: t-Student gana con
+    contundencia (AIC 8029.78 vs. 10258.68), consistente con la curtosis
+    extrema de Etapa 1 — Normal descartada de los informes. Orden ganador:
+    GARCH(1,1), persistencia α+β=0.858 (vida media ~4.5 ruedas), ν=4.57.
+    Walk-forward diario sobre val (294/294 ok): GARCH reduce ~39% el RMSE de
+    varianza y mejora el QLIKE frente al naive (varianza constante) en los
+    tres horizontes — a diferencia del resultado negativo de ARIMA, acá la
+    magnitud del movimiento sí resulta pronosticable. Ver
+    `docs/decisions/garch_volatility_track_a.md`. Código: `models/statistical/garch.py`,
+    `models/statistical/garch_runner.py`. Dependencia agregada: `arch` (`uv add arch`).
+- **Track B (Deep Learning) — sin arrancar todavía:** ventanas/lookback → LSTM y GRU →
+  evaluación preliminar de TFT/Transformer → híbrido CNN-LSTM. Entrenamientos largos
+  corren de fondo (overnight) sin bloquear el resto del trabajo.
+
+**Pregunta abierta sin resolver (planteada 6-7 sep 2026):** ¿tiene sentido sumar
+horizontes más largos (2 semanas / 1 mes, ej. 10/21 días hábiles), dado que Track A
+no encontró señal direccional en 1/3/5 días? El Plan de Trabajo Final ya preveía
+t+30/45/60 como horizontes "secundarios, a evaluar según resultados". Implica reabrir
+Nodo 4 (`features/target.py`, hoy cerrado) y re-correr Track A para esos horizontes,
+más ajustar el protocolo de CV por la autocorrelación de ventanas superpuestas. No
+decidido si se suma ahora o se documenta como trabajo futuro — retomar con el alumno
+antes de tocar horizontes o Track B. Ver nota equivalente en `CLAUDE.md`.
 - Checkpoint semanal (viernes): estado de ambos tracks + avance de redacción. Si un
   track se atrasa más de una semana, se decide ahí mismo qué profundidad exploratoria
   se recorta, sin tocar el checkpoint 4 de directores.

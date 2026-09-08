@@ -78,6 +78,72 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 
 **Nodo 4 completo — Bloque 1 del plan de acción cerrado.**
 
+### Bloque 2 (Fases 3-4, en paralelo) — Track A en curso
+
+- **Track A, Etapa 1 (completa, 5 sep 2026):** baseline ARIMA/SARIMA sobre el
+  log-return del índice (`models/statistical/arima.py`, `models/statistical/runner.py`).
+  Orden seleccionado por AIC (grid search de 288 candidatos, una sola vez sobre
+  train): **(0,0,0), sin estacionalidad** — sin estructura AR/MA explotable.
+  Walk-forward diario (refit de coeficientes, orden fijo) sobre val: 294/294 ok,
+  métricas RMSE/MAE idénticas al baseline naive (predecir retorno 0). Resultado
+  negativo válido, no una falla — ver `docs/decisions/arima_baseline_track_a.md`.
+  Predicciones en `results/track_a/arima_val_predictions.parquet`, tracking en
+  MLflow (experimento `rfx20-track-a`).
+- **Track A, Etapa 2 (completa, 5 sep 2026):** GARCH sobre volatilidad
+  condicional, media cero (`models/statistical/garch.py`,
+  `models/statistical/garch_runner.py`). Comparación experimental Normal vs.
+  t-Student por AIC (grid search, una sola vez sobre train): **t-Student
+  gana con contundencia** (AIC 8029.78 vs. 10258.68) — consistente con la
+  curtosis extrema ya vista en Etapa 1; Normal descartada de los informes.
+  Orden ganador: **GARCH(1,1)**, persistencia α+β=0.858 (vida media ~4.5
+  ruedas), ν=4.57. Walk-forward diario sobre val (294/294 ok): GARCH reduce
+  ~39% el RMSE de varianza y mejora el QLIKE vs. el naive (varianza
+  constante) en los tres horizontes — a diferencia de ARIMA, acá sí hay
+  señal explotable (la magnitud del movimiento, no la dirección). Ver
+  `docs/decisions/garch_volatility_track_a.md`. Predicciones en
+  `results/track_a/garch_val_predictions.parquet`, MLflow run `garch_baseline`.
+  Dependencia agregada: `arch` (`uv add arch`).
+- **Track A ML (5 sep 2026 en adelante):** protocolo compartido para SVM/RF/XGBoost/LightGBM
+  en `docs/decisions/ml_feature_engineering_track_a.md` (un modelo por horizonte,
+  indicadores de precio como ratio a close, CV temporal + RandomizedSearchCV,
+  permutation importance uniforme, nunca imputar gaps estructurales — futuros/
+  TAMAR/MEP pasan con nulos reales a los modelos de árbol, se excluyen para SVM).
+  **SVM completo:** empatado con el naive en los 3 horizontes — ver `docs/decisions/svm_track_a.md`.
+  **Random Forest completo:** levemente peor que el naive en los 3 horizontes, sin feature
+  estable entre horizontes en permutation importance — ver `docs/decisions/rf_track_a.md`.
+  **XGBoost completo:** sustancialmente peor que el naive (hasta 61% más RMSE en h=1) —
+  sobreajuste sobre dataset chico/ruidoso, sin early stopping en este baseline. Dependencia
+  agregada: `xgboost` (arrastra `nvidia-nccl-cu12`, 326MB, sin efecto en CPU). Ver `docs/decisions/xgboost_track_a.md`.
+  **LightGBM completo — cierra Track A:** en línea con SVM/RF (sin mejora significativa vs.
+  naive). Bug de threading anidado (`n_jobs=-1` en LGBMRegressor + RandomizedSearchCV) hizo
+  la corrida ~7h en vez de minutos — corregido (`n_jobs=1` en el estimador) para próximas
+  corridas, no afectó el resultado. Dependencia agregada: `lightgbm`. Ver `docs/decisions/lightgbm_track_a.md`.
+  **Síntesis Track A:** 4 modelos de ML + ARIMA/SARIMA coinciden en que la dirección del
+  retorno diario no es pronosticable con este feature set — motiva Track B (Deep Learning)
+  y refuerza que GARCH (volatilidad) es el hallazgo positivo de Bloque 2 hasta ahora.
+
+### Próximo paso (retomar acá)
+
+**Track A está completo.** Lo siguiente en el plan de acción es **Track B
+(Deep Learning: LSTM, GRU, evaluación preliminar de TFT/híbrido CNN-LSTM)**,
+en paralelo con Track A ya cerrado — todavía sin arrancar código.
+
+**Pregunta abierta sin resolver (planteada 6-7 sep 2026, no decidida):**
+el alumno preguntó si tiene sentido explorar horizontes más largos (2
+semanas / 1 mes de negociación, ej. 10/21 días hábiles) dado que los seis
+métodos de Track A no encontraron señal en la dirección a 1/3/5 días. Es
+una idea con respaldo (el Plan de Trabajo Final ya preveía t+30/45/60 como
+horizontes "secundarios, a evaluar según resultados" — sección "Variable
+objetivo" abajo), pero implica reabrir Nodo 4 (agregar `log_return_fwd_h`
+para h más largos en `features/target.py`, hoy cerrado como Bloque 1) y
+re-correr toda la batería de Track A para esos horizontes, además de
+ajustar el protocolo de CV por la autocorrelación que introduce la
+superposición de ventanas largas. **No se decidió** si sumarlo ahora
+(extensión de Bloque 2) o dejarlo anotado como trabajo futuro para no
+comprometer el cronograma "sin holgura" (`docs/plan_de_accion.md`). Retomar
+esta pregunta con el alumno antes de tocar código de horizontes o de
+Track B.
+
 ### Decisiones clave documentadas
 
 - Ver docs/decisions/ para decisiones metodológicas
@@ -85,7 +151,14 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 - Fuente del índice: spot + reconstruido (para validación cruzada)
 - Splits: solo COME requiere ajuste para Enfoque A
 - Eventos macro (PASO 2019, elecciones 2023): no ajustar, usar como dummy
-- Gaps en datos: consultar caso a caso (no asumir estrategia fija)
+- Gaps en datos: consultar caso a caso (no asumir estrategia fija). Principio
+  ya resuelto en general (5 sep 2026, ver `docs/decisions/ml_feature_engineering_track_a.md`):
+  **nunca inventar/imputar un valor para un dato que no existe realmente**
+  (ni 0, ni media/mediana, ni forward-fill sobre un gap grande) — usar el
+  manejo nativo de nulos del modelo si lo soporta (RandomForest/XGBoost/LightGBM
+  en este proyecto), o excluir el feature/fila para el modelo que no lo soporte
+  (SVM), documentando la asimetría explícitamente en vez de uniformar con un
+  valor fabricado.
 - Tests sin prioridad en esta etapa (revisar al llegar a modelos)
 - Formato procesado: wide + long persistidos, cada modelo elige
 - Flag in_index: conservar toda la serie histórica, marcar membresía con bool (ver docs/decisions/index_membership_flag.md)
@@ -269,7 +342,8 @@ Secundario (a evaluar según resultados): t+30, t+45, t+60 días
 - [x] Fuente de datos de eventos corporativos — `base.dividendos2.csv` + `Cartera Historica/`. El Excel de dividendos en especie
   no se persigue más (agosto 2026): impacto en precio inmaterial, ver `docs/decisions/dividends_and_splits.md` sección 4.
 - [x] ¿Se usa MLflow u otra herramienta para tracking de experimentos? → **Sí, MLflow** (agosto 2026), instalado (`uv add mlflow`,
-  backend local `mlruns/`, sin server). `results/experiments.duckdb` sigue para estado del pipeline y datos; MLflow es
+  backend local SQLite `mlruns.db`, sin server — el backend de archivos plano `mlruns/`
+  quedó en modo mantenimiento a partir de MLflow 3.15). `results/experiments.duckdb` sigue para estado del pipeline y datos; MLflow es
   específicamente para tracking de runs de modelos a partir de Fase 3.
 - [x] ¿Git + GitHub/GitLab para control de versiones? → Git ya en uso desde el inicio del repo.
 - [x] BADLAR/TAMAR → **resuelto (25 agosto 2026): el alumno sumó `badlar.csv`/`tamar.csv` manualmente** a
@@ -398,3 +472,10 @@ metodología del trabajo final.
 - BYMA tiene dos eventos de este tipo: 06/07/2022 (10:1) y 10/05/2024 (5:1)
 - Ver docs/decisions/dividends_and_splits.md para detalle completo
 - Pendiente: Excel de dividendos en especie con splits manuales
+
+### Split YPFD 2026
+
+- Split 10:1 el 2026-08-03. Verificado: precio y `cantidades_vigentes` de la
+  composición ya vienen ajustados en la fuente (PMY/Matriz), de forma
+  sincronizada — no requiere entrada en `config/splits.yaml`. Ver
+  docs/decisions/ypfd_split_2026.md para el detalle.

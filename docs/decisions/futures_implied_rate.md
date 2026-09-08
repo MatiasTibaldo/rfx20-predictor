@@ -67,3 +67,23 @@ Nodo 4, no en la Etapa 1 (indicadores técnicos + volatilidad realizada).
 - Output: columnas `implied_rate_front`, `implied_rate_next`,
   `term_spread_futures`, `futures_front_symbol` en
   `data/features/v1/macro.parquet`.
+
+## Nota (5 sep 2026): el gap pre-2020 es de la API, no del mercado
+
+Al preparar el feature set para los modelos de ML de Bloque 2 (Track A) se
+precisó el alcance de este gap: el primer contrato disponible en la API es
+`RFX20032020`, con primer dato el 2020-01-02. Según documentación adicional
+consultada por el alumno (no la circular oficial todavía), los futuros de
+RFX20 **empezaron a operarse en agosto de 2019** — la ausencia de datos
+anteriores a enero de 2020 es una limitación de cobertura histórica de la
+API de MatbaRofex, no evidencia de que el mercado no existiera antes. Esta
+distinción debe quedar explícita en la tesis (no es lo mismo "no hay
+mercado" que "no hay datos disponibles de un mercado que sí operaba").
+Pendiente: anexar la circular que establece la fecha de inicio de
+operatoria (agosto 2019) en cuanto el alumno la consiga.
+
+Adicionalmente, dentro del rango sí cubierto por la API (2020-01-02 en
+adelante) persisten nulos dispersos en `implied_rate_front`/`implied_rate_next`
+en días puntuales sin tasa implícita o sin segundo contrato simultáneo (ver
+sección "Front-month..." en `docs/decisions/macro_features_etapa2.md`) — no
+es exclusivamente un problema de cobertura pre-2020.

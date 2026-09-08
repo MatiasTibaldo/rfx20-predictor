@@ -11,6 +11,9 @@ data/*.duckdb
 results/
 
 # MLflow local tracking backend (Fase 3+, model experiment runs)
+# mlruns.db = SQLite tracking store (from MLflow 3.15 on, mlruns/ file store
+# is in maintenance mode). mlruns/ kept ignored too in case older runs exist.
+mlruns.db
 mlruns/
 
 # --- Environment and secrets ---

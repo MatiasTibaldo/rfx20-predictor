@@ -64,12 +64,16 @@ regenerar `data/raw/v1/*.parquet`, y `features.runner` para extender
 
 La composición vigente al 25/08/2026 incluye **ECOG**, que no estaba en
 `ingestion/instruments.py::RFX20_TICKERS` (27 tickers). Entró al índice
-alrededor del 2026-05-04. **No se agregó su ingesta de OHLCV** — está fuera
-de alcance para esta etapa (que usa Opción A: índice + macro, sin
-componentes en `features_long.parquet`). Si en el futuro se necesitan los
-27+ componentes actualizados (Opción B, o Bloque 2), hay que sumar ECOG a
-`RFX20_TICKERS` y correr `ingestion.pipeline_runner` antes de asumir que la
-lista de 27 sigue completa.
+alrededor del 2026-05-04.
+
+**Actualización (26 ago 2026, mismo día — resuelto):** se agregó ECOG a
+`RFX20_TICKERS` (28 tickers) y se corrió `ingestion.pipeline_runner` +
+`features.runner`. Verificado en `technical_components_long.parquet`: 388
+filas de ECOG, 2025-01-21 → 2026-08-25, con `in_index=false` antes de su
+entrada al índice y `true` después. No fue necesario para Fase 2
+(`features_long.parquet` sigue sin componentes individuales, Opción A),
+pero queda disponible para cualquier etapa posterior (Track B u otra) que
+necesite trabajar con los componentes actualizados.
 
 ## "Solo por esta vez"
 
