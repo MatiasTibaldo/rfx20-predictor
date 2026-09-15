@@ -40,9 +40,15 @@ def _naive_zero_metrics(df: pl.DataFrame, horizons: list[int]) -> dict[int, dict
     return metrics
 
 
-def main() -> None:
+def main(
+    horizons: list[int] | None = None,
+    dataset_name: str = "features_long",
+    run_name: str = "arima_sarima_baseline",
+    predictions_path=PREDICTIONS_PATH,
+) -> None:
+    horizons = horizons or HORIZONS
     store = DuckDBStore()
-    df = store.load_parquet(layer="features", name="features_long", version="v1")
+    df = store.load_parquet(layer="features", name=dataset_name, version="v1")
 
     train_log_return = df.filter(pl.col("split") == "train")["log_return"].to_numpy()
 
@@ -51,18 +57,18 @@ def main() -> None:
 
     logger.info("[track_a.runner] Running daily-refit walk-forward over val...")
     wf_result = walk_forward_evaluate(
-        df, order_result.order, order_result.seasonal_order, horizons=HORIZONS
+        df, order_result.order, order_result.seasonal_order, horizons=horizons
     )
     arima_metrics = compute_metrics(wf_result.predictions)
-    naive_metrics = _naive_zero_metrics(df, HORIZONS)
+    naive_metrics = _naive_zero_metrics(df, horizons)
 
-    PREDICTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    wf_result.predictions.write_parquet(PREDICTIONS_PATH)
-    logger.info(f"[track_a.runner] Predictions saved -> {PREDICTIONS_PATH}")
+    predictions_path.parent.mkdir(parents=True, exist_ok=True)
+    wf_result.predictions.write_parquet(predictions_path)
+    logger.info(f"[track_a.runner] Predictions saved -> {predictions_path}")
 
     mlflow.set_tracking_uri(f"sqlite:///{MLRUNS_DB}")
     mlflow.set_experiment("rfx20-track-a")
-    with mlflow.start_run(run_name="arima_sarima_baseline"):
+    with mlflow.start_run(run_name=run_name):
         mlflow.log_params(
             {
                 "order": order_result.order,
@@ -73,18 +79,18 @@ def main() -> None:
                 "n_failed_refits": wf_result.n_failed,
             }
         )
-        for h in HORIZONS:
+        for h in horizons:
             mlflow.log_metric(f"rmse_h{h}", arima_metrics[h]["rmse"])
             mlflow.log_metric(f"mae_h{h}", arima_metrics[h]["mae"])
             mlflow.log_metric(f"naive_rmse_h{h}", naive_metrics[h]["rmse"])
             mlflow.log_metric(f"naive_mae_h{h}", naive_metrics[h]["mae"])
-        mlflow.log_artifact(str(PREDICTIONS_PATH))
+        mlflow.log_artifact(str(predictions_path))
 
     print(f"\nOrden seleccionado: order={order_result.order} "
           f"seasonal_order={order_result.seasonal_order} (AIC={order_result.aic:.2f})")
     print(f"Refits: {wf_result.n_attempted - wf_result.n_failed}/{wf_result.n_attempted} ok\n")
     print(f"{'Horizonte':<10}{'RMSE (ARIMA)':<16}{'RMSE (naive=0)':<16}{'MAE (ARIMA)':<14}{'MAE (naive=0)':<14}")
-    for h in HORIZONS:
+    for h in horizons:
         a, n = arima_metrics[h], naive_metrics[h]
         print(
             f"{h:<10}{a['rmse']:<16.6f}{n['rmse']:<16.6f}{a['mae']:<14.6f}{n['mae']:<14.6f}"

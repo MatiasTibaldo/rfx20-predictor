@@ -36,17 +36,22 @@ PARAM_DISTRIBUTIONS = {
 }
 
 
-def main() -> None:
+def main(
+    horizons: list[int] | None = None,
+    dataset_name: str = "features_long",
+    results_dir=RESULTS_DIR,
+) -> None:
+    horizons = horizons or HORIZONS
     store = DuckDBStore()
-    df = store.load_parquet(layer="features", name="features_long", version="v1")
+    df = store.load_parquet(layer="features", name=dataset_name, version="v1")
 
     mlflow.set_tracking_uri(f"sqlite:///{MLRUNS_DB}")
     mlflow.set_experiment("rfx20-track-a-ml")
 
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir.mkdir(parents=True, exist_ok=True)
     summary_rows = []
 
-    for h in HORIZONS:
+    for h in horizons:
         logger.info(f"[svm_runner] Horizonte {h}: construyendo feature matrix...")
         model_frame = build_model_frame(df, horizon=h, exclude_structural_gaps=True)
         X_train, y_train, feature_names = split_arrays(model_frame, "train")
@@ -65,10 +70,11 @@ def main() -> None:
             X_val,
             y_val,
             feature_names,
+            horizon=h,
         )
         naive_rmse, naive_mae = naive_zero_metrics(y_val)
 
-        importances_path = RESULTS_DIR / f"importances_h{h}.parquet"
+        importances_path = results_dir / f"importances_h{h}.parquet"
         pl.DataFrame(
             result.importances,
             schema=["feature", "importance_mean", "importance_std"],

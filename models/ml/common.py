@@ -22,6 +22,7 @@ from sklearn.inspection import permutation_importance
 from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 
 HORIZONS = [1, 3, 5]
+LONG_HORIZONS = [10, 21]  # ~2 semanas / 1 mes de ruedas — ver docs/decisions/long_horizons_track_a.md
 RANDOM_STATE = 42
 
 # Price-level columns (same scale as the index itself, which drifted from
@@ -44,10 +45,16 @@ STRUCTURAL_GAP_GROUPS = {
     "mep_available": MEP_COLS,
 }
 
-# Dropped entirely (not kept, not a feature): the forward-return columns
-# that aren't this horizon's target (all are future information) and the
-# categorical contract id, which isn't a numeric predictor.
-ALWAYS_DROP_COLS = ["log_return_fwd_1", "log_return_fwd_3", "log_return_fwd_5", "futures_front_symbol"]
+# Dropped entirely (not kept, not a feature): the categorical contract id,
+# which isn't a numeric predictor. The forward-return columns that aren't
+# this horizon's target are ALSO always dropped (all are future
+# information) — detected dynamically by prefix in build_model_frame
+# rather than hardcoded here, so this stays correct regardless of which
+# horizons a given features_long variant carries (e.g. features_long_ext.parquet
+# adds log_return_fwd_10/21 — a hardcoded 1/3/5 list would silently let
+# those leak through as features for the wrong horizon's model).
+FWD_RETURN_PREFIX = "log_return_fwd_"
+ALWAYS_DROP_COLS = ["futures_front_symbol"]
 
 # Kept in the frame (needed for split filtering) but excluded from the
 # feature list in split_arrays — not dropped here like ALWAYS_DROP_COLS.
@@ -96,8 +103,18 @@ def build_model_frame(
     """
     out = _add_price_ratios(df)
     out = _add_availability_flags(out)
-    out = out.rename({f"log_return_fwd_{horizon}": "target"})
-    drop_cols = [c for c in ALWAYS_DROP_COLS if c in out.columns]
+
+    target_col = f"{FWD_RETURN_PREFIX}{horizon}"
+    fwd_cols = [c for c in out.columns if c.startswith(FWD_RETURN_PREFIX)]
+    if target_col not in fwd_cols:
+        raise ValueError(
+            f"horizon={horizon} not found (expected column {target_col!r}); "
+            f"available forward-return columns: {fwd_cols}"
+        )
+    other_fwd_cols = [c for c in fwd_cols if c != target_col]
+
+    out = out.rename({target_col: "target"})
+    drop_cols = [c for c in ALWAYS_DROP_COLS + other_fwd_cols if c in out.columns]
     out = out.drop(drop_cols)
 
     if exclude_structural_gaps:
@@ -148,6 +165,41 @@ def temporal_cv(n_splits: int = 5) -> TimeSeriesSplit:
     return TimeSeriesSplit(n_splits=n_splits)
 
 
+def purged_splits(
+    n_samples: int, n_splits: int, horizon: int
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Expanding-window splits like temporal_cv, with the last `horizon` train
+    rows purged before each validation fold.
+
+    See docs/decisions/long_horizons_track_a.md. A row's target looks
+    ``horizon`` steps into the future, so with a plain TimeSeriesSplit the
+    last ``horizon`` rows right before each fold's validation start have a
+    label that peeks into (or past) that validation fold — the model would
+    be trained on a y-value it shouldn't yet "know". This purges those rows
+    from train before scoring, following López de Prado's purge technique
+    (Advances in Financial Machine Learning) — already a project reference
+    point, see docs/decisions/fractional_differentiation.md.
+
+    At horizon<=1 this removes at most one row per fold (negligible — see
+    docs/decisions/long_horizons_track_a.md for the measured effect at
+    h=1/3/5 vs. h=10/21), so callers can pass the real horizon unconditionally.
+
+    Args:
+        n_samples: Length of the training array being split.
+        n_splits: TimeSeriesSplit fold count.
+        horizon: Forecast horizon in rows — rows purged per fold.
+
+    Returns:
+        List of (train_idx, val_idx) index arrays, one pair per fold.
+    """
+    splits = []
+    for train_idx, val_idx in TimeSeriesSplit(n_splits=n_splits).split(np.zeros((n_samples, 1))):
+        if horizon > 0:
+            train_idx = train_idx[:-horizon] if len(train_idx) > horizon else train_idx[:0]
+        splits.append((train_idx, val_idx))
+    return splits
+
+
 def tune_and_evaluate(
     estimator,
     param_distributions: dict,
@@ -156,6 +208,7 @@ def tune_and_evaluate(
     X_val: np.ndarray,
     y_val: np.ndarray,
     feature_names: list[str],
+    horizon: int = 0,
     n_iter: int = 20,
     n_splits: int = 5,
     n_permutation_repeats: int = 20,
@@ -163,7 +216,9 @@ def tune_and_evaluate(
     """Shared tuning + evaluation protocol for every Track A ML model.
 
     Hyperparameters are chosen by RandomizedSearchCV over an expanding-window
-    TimeSeriesSplit on train only (val is never used for tuning). The best
+    TimeSeriesSplit on train only (val is never used for tuning), purged per
+    `horizon` (see purged_splits) so the CV score isn't inflated by
+    forward-looking label leakage across fold boundaries. The best
     estimator is then evaluated once on val (RMSE/MAE) and its permutation
     importance computed on val, with a fixed random_state throughout for
     exact reproducibility.
@@ -175,6 +230,10 @@ def tune_and_evaluate(
         X_val, y_val: Validation arrays.
         feature_names: Column names matching X's columns, for the
             importance report.
+        horizon: Forecast horizon in rows, forwarded to purged_splits.
+            Defaults to 0 (no purge) for backward compatibility with the
+            already-published h=1/3/5 Track A results, which predate this
+            parameter — pass the real horizon for any new run.
         n_iter: RandomizedSearchCV budget.
         n_splits: TimeSeriesSplit fold count.
         n_permutation_repeats: Permutation importance repeats.
@@ -187,7 +246,7 @@ def tune_and_evaluate(
         estimator,
         param_distributions=param_distributions,
         n_iter=n_iter,
-        cv=temporal_cv(n_splits),
+        cv=purged_splits(len(X_train), n_splits, horizon),
         scoring="neg_root_mean_squared_error",
         random_state=RANDOM_STATE,
         n_jobs=-1,

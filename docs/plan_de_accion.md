@@ -180,14 +180,15 @@ RFX20, BADLAR/TAMAR.
   evaluación preliminar de TFT/Transformer → híbrido CNN-LSTM. Entrenamientos largos
   corren de fondo (overnight) sin bloquear el resto del trabajo.
 
-**Pregunta abierta sin resolver (planteada 6-7 sep 2026):** ¿tiene sentido sumar
-horizontes más largos (2 semanas / 1 mes, ej. 10/21 días hábiles), dado que Track A
-no encontró señal direccional en 1/3/5 días? El Plan de Trabajo Final ya preveía
-t+30/45/60 como horizontes "secundarios, a evaluar según resultados". Implica reabrir
-Nodo 4 (`features/target.py`, hoy cerrado) y re-correr Track A para esos horizontes,
-más ajustar el protocolo de CV por la autocorrelación de ventanas superpuestas. No
-decidido si se suma ahora o se documenta como trabajo futuro — retomar con el alumno
-antes de tocar horizontes o Track B. Ver nota equivalente en `CLAUDE.md`.
+**Extensión a horizontes largos (10/21 días hábiles) — evaluada y descartada (8 sep
+2026):** se probó sobre un dataset aparte (`features_long_ext.parquet`, sin fusionar
+al canónico) con CV con purge (evita la fuga por solapamiento de ventanas largas).
+Mismo resultado que a 1/3/5 días: sin mejora consistente en ARIMA/SVM/RF/XGBoost/
+LightGBM, GARCH sigue siendo el único positivo. Se descartó por la condición de
+salida acordada de antemano — el alcance de horizontes del proyecto sigue siendo
+1/3/5 días. Quedan como mejoras permanentes del protocolo: el purge de CV y la
+corrección de un bug de fuga (columnas `log_return_fwd_*` detectadas dinámicamente,
+antes hardcodeadas). Ver `docs/decisions/long_horizons_track_a.md`.
 - Checkpoint semanal (viernes): estado de ambos tracks + avance de redacción. Si un
   track se atrasa más de una semana, se decide ahí mismo qué profundidad exploratoria
   se recorta, sin tocar el checkpoint 4 de directores.

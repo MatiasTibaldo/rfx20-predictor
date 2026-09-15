@@ -50,9 +50,15 @@ def _naive_variance_metrics(
     return metrics
 
 
-def main() -> None:
+def main(
+    horizons: list[int] | None = None,
+    dataset_name: str = "features_long",
+    run_name: str = "garch_baseline",
+    predictions_path=PREDICTIONS_PATH,
+) -> None:
+    horizons = horizons or HORIZONS
     store = DuckDBStore()
-    df = store.load_parquet(layer="features", name="features_long", version="v1")
+    df = store.load_parquet(layer="features", name=dataset_name, version="v1")
 
     train_log_return = df.filter(pl.col("split") == "train")["log_return"].drop_nulls().to_numpy()
     train_variance = float(np.var(train_log_return))
@@ -79,18 +85,18 @@ def main() -> None:
 
     logger.info("[track_a.garch_runner] Running daily-refit walk-forward over val...")
     wf_result = walk_forward_evaluate_variance(
-        df, best.p, best.q, best.dist, horizons=HORIZONS
+        df, best.p, best.q, best.dist, horizons=horizons
     )
     garch_metrics = compute_variance_metrics(wf_result.predictions)
-    naive_metrics = _naive_variance_metrics(df, train_variance, HORIZONS)
+    naive_metrics = _naive_variance_metrics(df, train_variance, horizons)
 
-    PREDICTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    wf_result.predictions.write_parquet(PREDICTIONS_PATH)
-    logger.info(f"[track_a.garch_runner] Predictions saved -> {PREDICTIONS_PATH}")
+    predictions_path.parent.mkdir(parents=True, exist_ok=True)
+    wf_result.predictions.write_parquet(predictions_path)
+    logger.info(f"[track_a.garch_runner] Predictions saved -> {predictions_path}")
 
     mlflow.set_tracking_uri(f"sqlite:///{MLRUNS_DB}")
     mlflow.set_experiment("rfx20-track-a")
-    with mlflow.start_run(run_name="garch_baseline"):
+    with mlflow.start_run(run_name=run_name):
         mlflow.log_params(
             {
                 "p": best.p,
@@ -105,12 +111,12 @@ def main() -> None:
                 "train_unconditional_variance": train_variance,
             }
         )
-        for h in HORIZONS:
+        for h in horizons:
             mlflow.log_metric(f"rmse_var_h{h}", garch_metrics[h]["rmse"])
             mlflow.log_metric(f"qlike_h{h}", garch_metrics[h]["qlike"])
             mlflow.log_metric(f"naive_rmse_var_h{h}", naive_metrics[h]["rmse"])
             mlflow.log_metric(f"naive_qlike_h{h}", naive_metrics[h]["qlike"])
-        mlflow.log_artifact(str(PREDICTIONS_PATH))
+        mlflow.log_artifact(str(predictions_path))
 
     print(
         f"\nComparación de distribuciones (grid AIC, train):\n"
@@ -122,7 +128,7 @@ def main() -> None:
     print(f"Orden seleccionado: GARCH({best.p},{best.q}), dist={best.dist!r} (AIC={best.aic:.2f})")
     print(f"Refits: {wf_result.n_attempted - wf_result.n_failed}/{wf_result.n_attempted} ok\n")
     print(f"{'Horizonte':<10}{'RMSE (GARCH)':<16}{'RMSE (naive)':<16}{'QLIKE (GARCH)':<16}{'QLIKE (naive)':<16}")
-    for h in HORIZONS:
+    for h in horizons:
         g, n = garch_metrics[h], naive_metrics[h]
         print(
             f"{h:<10}{g['rmse']:<16.6e}{n['rmse']:<16.6e}{g['qlike']:<16.6f}{n['qlike']:<16.6f}"

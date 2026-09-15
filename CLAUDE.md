@@ -124,25 +124,24 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 
 ### Próximo paso (retomar acá)
 
-**Track A está completo.** Lo siguiente en el plan de acción es **Track B
+**Track A está completo, incluida la exploración de horizontes largos —
+sin líneas pendientes.** Lo siguiente en el plan de acción es **Track B
 (Deep Learning: LSTM, GRU, evaluación preliminar de TFT/híbrido CNN-LSTM)**,
-en paralelo con Track A ya cerrado — todavía sin arrancar código.
+todavía sin arrancar código.
 
-**Pregunta abierta sin resolver (planteada 6-7 sep 2026, no decidida):**
-el alumno preguntó si tiene sentido explorar horizontes más largos (2
-semanas / 1 mes de negociación, ej. 10/21 días hábiles) dado que los seis
-métodos de Track A no encontraron señal en la dirección a 1/3/5 días. Es
-una idea con respaldo (el Plan de Trabajo Final ya preveía t+30/45/60 como
-horizontes "secundarios, a evaluar según resultados" — sección "Variable
-objetivo" abajo), pero implica reabrir Nodo 4 (agregar `log_return_fwd_h`
-para h más largos en `features/target.py`, hoy cerrado como Bloque 1) y
-re-correr toda la batería de Track A para esos horizontes, además de
-ajustar el protocolo de CV por la autocorrelación que introduce la
-superposición de ventanas largas. **No se decidió** si sumarlo ahora
-(extensión de Bloque 2) o dejarlo anotado como trabajo futuro para no
-comprometer el cronograma "sin holgura" (`docs/plan_de_accion.md`). Retomar
-esta pregunta con el alumno antes de tocar código de horizontes o de
-Track B.
+**Pregunta que quedó abierta (6-7 sep 2026) — ya resuelta (8 sep 2026):**
+se evaluó extender a horizontes largos (10/21 días hábiles, ~2 semanas/1
+mes) con un dataset aparte (`features_long_ext.parquet`, no fusionado al
+canónico) y un CV con purge para evitar la fuga por solapamiento de
+ventanas. Resultado: mismo patrón que a 1/3/5 días — ARIMA/SVM/RF/XGBoost/
+LightGBM sin mejora consistente sobre el naive, GARCH sigue siendo el único
+positivo (~39-40% menos error de varianza). **Se descartó esta línea**
+(condición de salida acordada de antemano) — no se sube a producción, el
+alcance de horizontes del proyecto sigue siendo 1/3/5 días. Quedan como
+mejoras permanentes del protocolo compartido: el purge de CV
+(`models/ml/common.py::purged_splits`) y la corrección de un bug de fuga
+(detección dinámica de columnas `log_return_fwd_*`, antes hardcodeada a
+1/3/5). Ver `docs/decisions/long_horizons_track_a.md`.
 
 ### Decisiones clave documentadas
 
