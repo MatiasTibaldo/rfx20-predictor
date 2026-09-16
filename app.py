@@ -22,6 +22,7 @@ from scipy import stats as sp_stats
 import streamlit as st
 from plotly.subplots import make_subplots
 
+from processing.cleaner import apply_composition_price_corrections, apply_corrections
 from ingestion.composition import RFX20CompositionLoader
 from storage.store import DuckDBStore
 
@@ -220,7 +221,10 @@ def compute_index_reconstruction() -> pl.DataFrame | None:
         return None
 
     comp = pl.read_parquet(comp_path)
-    spot = pl.read_parquet(spot_path).rename({"value": "spot_value"})
+    comp = apply_composition_price_corrections(comp).drop("price_corrected")
+    spot = pl.read_parquet(spot_path).rename({"value": "close"})
+    spot = apply_corrections(spot, ticker="RFX20").drop("data_patched")
+    spot = spot.rename({"close": "spot_value"})
 
     # reconstructed = Σ(close_i * quantity_i) por fecha
     # quantity en el parquet ya son unidades del índice (QI = Q/Divisor_base)

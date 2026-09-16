@@ -81,6 +81,25 @@ splits:
       Tratamiento: multiplicar cantidades de BYMA en el índice por 5.
       Pendiente: obtener Excel completo de dividendos en especie.
 
+  - ticker: BYMA
+    date: "2025-05-25"
+    ratio: 2.0
+    source: "Historial de splits BYMA (BYMAm) provisto por el alumno"
+    in_index: true
+    verified: true
+    type: "split_puro"
+    notes: >
+      Desdoblamiento 2:1. Encontrado indirectamente (16 sep 2026) al investigar
+      el desvío composición-vs-OHLCV de BYMA durante la corrección de
+      sept-2019 (ver docs/decisions/sept2019_composicion_corrupta.md, sección
+      5 y pendiente #2): el ratio composición/OHLCV bajaba de 2 a 1 en algún
+      punto entre 2025-01-02 y 2026-07-01, sin split conocido que lo explicara.
+      Confirmado por el alumno contra el historial oficial de splits de BYMA,
+      y verificado en los datos: ratio=2.0 el 2025-05-23, ratio=1.0 el
+      2025-05-26 (salto exacto en el borde del fin de semana). Cumulativo con
+      los splits 2022 (10:1) y 2024 (5:1): factor total 100x antes de
+      2022-07-06, consistente con lo observado.
+
 # Eventos macroeconómicos identificados como falsos positivos en validate_variation.py
 # NO son splits — son movimientos reales del mercado que se documentan para
 # uso como variables dummy en el módulo de feature engineering
@@ -97,6 +116,24 @@ macro_events:
     direction: "positive"
     notes: "Suba sistémica del mercado. No requiere ajuste de serie."
 
+# Cambios de base/divisor del propio índice RFX20 (no de un ticker individual).
+# Tratamiento idéntico a un split: ajuste retroactivo hacia atrás, para que el
+# retorno calculado en el borde refleje movimiento real de mercado y no el
+# cambio artificial de escala. Ver docs/decisions/base_change_oct2023.md
+# (esa decisión corrige el índice *reconstruido*; esta sección corrige el
+# *spot oficial* usado como target del modelo — son ajustes distintos).
+index_base_changes:
+  - date: "2023-10-09"
+    ratio: 10.0
+    source: "Guía Metodológica RFX20 (Anexo cambios metodológicos), vigencia 09/10/2023"
+    verified: true
+    notes: >
+      La circular fija el divisor al cierre del 06/10/2023 x10. El spot oficial
+      (rfx20_spot.parquet) refleja el cambio recién el 09/10/2023: 861.644,97 ->
+      88.673,98 (factor exacto ~10x). Sin ajuste, el log_return de esa fecha es
+      -2.27 (equivalente a -89.7% en un día) y contamina realized_vol y
+      log_return_fwd de los días circundantes.
+
 # Datos sucios identificados — a tratar en módulo processing/
 dirty_data:
   - ticker: BBAR
@@ -109,6 +146,153 @@ dirty_data:
       Precio de apertura anómalo. Close anterior: 142.6. Posible error de feed.
       Validado contra TradingView: open=145.25, high=154.0, low=142.3,
       close=153.5, vol=482920.
+
+  # Spot RFX20 corrompido 2019-09-23 -> 2019-09-27 (ver docs/decisions/
+  # sept2019_composicion_corrupta.md para el detalle completo). Confirmado
+  # contra el API histórico de MatbaRofex (/api/rfx20/historical) que el
+  # error está en el origen, no en nuestra ingesta. Fix = recálculo
+  # Σ(quantity × close_corregido) con quantity original (correcta) y
+  # close tomado del OHLCV canónico (BYMA y YPFD reescalados x100/x10 para
+  # quedar en la misma base nominal que el resto de la serie de
+  # composición — ver composition_price_corrections más abajo).
+  - ticker: RFX20
+    date: "2019-09-23"
+    field: "close"
+    fix: 40205.4872
+    notes: "Original corrupto: 77080.92. Ver docs/decisions/sept2019_composicion_corrupta.md."
+  - ticker: RFX20
+    date: "2019-09-24"
+    field: "close"
+    fix: 38453.6444
+    notes: "Original corrupto: 71795.88. Ver docs/decisions/sept2019_composicion_corrupta.md."
+  - ticker: RFX20
+    date: "2019-09-25"
+    field: "close"
+    fix: 38530.0454
+    notes: "Original corrupto: 72653.59. Ver docs/decisions/sept2019_composicion_corrupta.md."
+  - ticker: RFX20
+    date: "2019-09-26"
+    field: "close"
+    fix: 38331.1851
+    notes: "Original corrupto: 72522.30. Ver docs/decisions/sept2019_composicion_corrupta.md."
+  - ticker: RFX20
+    date: "2019-09-27"
+    field: "close"
+    fix: 38912.6513
+    notes: "Original corrupto: 74146.57. Ver docs/decisions/sept2019_composicion_corrupta.md."
+
+# Precios de close corrompidos en rfx20_composition.parquet (fuente:
+# cartera_historica_201909{23..27}.csv) para los 20 componentes del índice,
+# 2019-09-23 -> 2019-09-27. Confirmado contra el API histórico de MatbaRofex:
+# el error está en el origen (mismo valor reportado por /api/rfx20/historical),
+# no es un bug de ingesta. quantity NO está afectado (coincide con el API).
+# Fix = close del OHLCV canónico (data/raw/v1/*_ohlcv.parquet) para el mismo
+# ticker/fecha; BYMA y YPFD reescalados x100 y x10 respectivamente porque su
+# OHLCV ya viene retroajustado por splits futuros (ver docs/decisions/
+# ypfd_split_2026.md y el split BYMA 2022/2024 en este mismo archivo) y
+# pegar el valor crudo generaría un salto artificial nuevo en el borde.
+# Detalle completo, tabla y metodología: docs/decisions/sept2019_composicion_corrupta.md
+composition_price_corrections:
+  - {ticker: ALUA, date: "2019-09-23", fix: 21.8500}
+  - {ticker: APBR, date: "2019-09-23", fix: 488.0000}
+  - {ticker: BBAR, date: "2019-09-23", fix: 95.9500}
+  - {ticker: BMA, date: "2019-09-23", fix: 158.3000}
+  - {ticker: BYMA, date: "2019-09-23", fix: 218.2500}
+  - {ticker: CEPU, date: "2019-09-23", fix: 20.7000}
+  - {ticker: COME, date: "2019-09-23", fix: 1.6600}
+  - {ticker: CRES, date: "2019-09-23", fix: 39.4500}
+  - {ticker: EDN, date: "2019-09-23", fix: 24.6500}
+  - {ticker: GGAL, date: "2019-09-23", fix: 80.0000}
+  - {ticker: PAMP, date: "2019-09-23", fix: 43.2000}
+  - {ticker: SUPV, date: "2019-09-23", fix: 38.2000}
+  - {ticker: TECO2, date: "2019-09-23", fix: 133.5000}
+  - {ticker: TGNO4, date: "2019-09-23", fix: 43.7500}
+  - {ticker: TGSU2, date: "2019-09-23", fix: 114.2000}
+  - {ticker: TRAN, date: "2019-09-23", fix: 23.1000}
+  - {ticker: TS, date: "2019-09-23", fix: 722.0000}
+  - {ticker: TXAR, date: "2019-09-23", fix: 15.1000}
+  - {ticker: VALO, date: "2019-09-23", fix: 6.5000}
+  - {ticker: YPFD, date: "2019-09-23", fix: 607.0000}
+  - {ticker: ALUA, date: "2019-09-24", fix: 21.7000}
+  - {ticker: APBR, date: "2019-09-24", fix: 473.0000}
+  - {ticker: BBAR, date: "2019-09-24", fix: 90.5000}
+  - {ticker: BMA, date: "2019-09-24", fix: 154.5000}
+  - {ticker: BYMA, date: "2019-09-24", fix: 212.5000}
+  - {ticker: CEPU, date: "2019-09-24", fix: 19.3500}
+  - {ticker: COME, date: "2019-09-24", fix: 1.5800}
+  - {ticker: CRES, date: "2019-09-24", fix: 37.5000}
+  - {ticker: EDN, date: "2019-09-24", fix: 22.6000}
+  - {ticker: GGAL, date: "2019-09-24", fix: 76.8000}
+  - {ticker: PAMP, date: "2019-09-24", fix: 40.7000}
+  - {ticker: SUPV, date: "2019-09-24", fix: 36.1000}
+  - {ticker: TECO2, date: "2019-09-24", fix: 121.5000}
+  - {ticker: TGNO4, date: "2019-09-24", fix: 40.9000}
+  - {ticker: TGSU2, date: "2019-09-24", fix: 108.0000}
+  - {ticker: TRAN, date: "2019-09-24", fix: 21.2500}
+  - {ticker: TS, date: "2019-09-24", fix: 678.0000}
+  - {ticker: TXAR, date: "2019-09-24", fix: 14.6500}
+  - {ticker: VALO, date: "2019-09-24", fix: 6.1300}
+  - {ticker: YPFD, date: "2019-09-24", fix: 585.0000}
+  - {ticker: ALUA, date: "2019-09-25", fix: 21.8500}
+  - {ticker: APBR, date: "2019-09-25", fix: 460.0000}
+  - {ticker: BBAR, date: "2019-09-25", fix: 91.8000}
+  - {ticker: BMA, date: "2019-09-25", fix: 158.0000}
+  - {ticker: BYMA, date: "2019-09-25", fix: 220.0000}
+  - {ticker: CEPU, date: "2019-09-25", fix: 19.2500}
+  - {ticker: COME, date: "2019-09-25", fix: 1.6000}
+  - {ticker: CRES, date: "2019-09-25", fix: 37.5000}
+  - {ticker: EDN, date: "2019-09-25", fix: 22.4000}
+  - {ticker: GGAL, date: "2019-09-25", fix: 78.8000}
+  - {ticker: PAMP, date: "2019-09-25", fix: 41.1000}
+  - {ticker: SUPV, date: "2019-09-25", fix: 36.8000}
+  - {ticker: TECO2, date: "2019-09-25", fix: 125.1000}
+  - {ticker: TGNO4, date: "2019-09-25", fix: 41.0000}
+  - {ticker: TGSU2, date: "2019-09-25", fix: 110.4000}
+  - {ticker: TRAN, date: "2019-09-25", fix: 21.4000}
+  - {ticker: TS, date: "2019-09-25", fix: 677.5000}
+  - {ticker: TXAR, date: "2019-09-25", fix: 14.6000}
+  - {ticker: VALO, date: "2019-09-25", fix: 6.0000}
+  - {ticker: YPFD, date: "2019-09-25", fix: 587.9000}
+  - {ticker: ALUA, date: "2019-09-26", fix: 21.8000}
+  - {ticker: APBR, date: "2019-09-26", fix: 460.5000}
+  - {ticker: BBAR, date: "2019-09-26", fix: 90.9000}
+  - {ticker: BMA, date: "2019-09-26", fix: 157.5000}
+  - {ticker: BYMA, date: "2019-09-26", fix: 221.0000}
+  - {ticker: CEPU, date: "2019-09-26", fix: 18.7000}
+  - {ticker: COME, date: "2019-09-26", fix: 1.5800}
+  - {ticker: CRES, date: "2019-09-26", fix: 37.2000}
+  - {ticker: EDN, date: "2019-09-26", fix: 22.0000}
+  - {ticker: GGAL, date: "2019-09-26", fix: 79.0500}
+  - {ticker: PAMP, date: "2019-09-26", fix: 41.0000}
+  - {ticker: SUPV, date: "2019-09-26", fix: 37.7500}
+  - {ticker: TECO2, date: "2019-09-26", fix: 123.2000}
+  - {ticker: TGNO4, date: "2019-09-26", fix: 41.7000}
+  - {ticker: TGSU2, date: "2019-09-26", fix: 108.5000}
+  - {ticker: TRAN, date: "2019-09-26", fix: 21.4000}
+  - {ticker: TS, date: "2019-09-26", fix: 659.0000}
+  - {ticker: TXAR, date: "2019-09-26", fix: 15.1500}
+  - {ticker: VALO, date: "2019-09-26", fix: 6.0300}
+  - {ticker: YPFD, date: "2019-09-26", fix: 580.7500}
+  - {ticker: ALUA, date: "2019-09-27", fix: 21.6000}
+  - {ticker: APBR, date: "2019-09-27", fix: 459.0000}
+  - {ticker: BBAR, date: "2019-09-27", fix: 95.0000}
+  - {ticker: BMA, date: "2019-09-27", fix: 163.0000}
+  - {ticker: BYMA, date: "2019-09-27", fix: 220.0000}
+  - {ticker: CEPU, date: "2019-09-27", fix: 18.5500}
+  - {ticker: COME, date: "2019-09-27", fix: 1.6100}
+  - {ticker: CRES, date: "2019-09-27", fix: 37.5000}
+  - {ticker: EDN, date: "2019-09-27", fix: 22.5000}
+  - {ticker: GGAL, date: "2019-09-27", fix: 82.0000}
+  - {ticker: PAMP, date: "2019-09-27", fix: 42.4000}
+  - {ticker: SUPV, date: "2019-09-27", fix: 40.0000}
+  - {ticker: TECO2, date: "2019-09-27", fix: 121.0000}
+  - {ticker: TGNO4, date: "2019-09-27", fix: 42.7000}
+  - {ticker: TGSU2, date: "2019-09-27", fix: 109.5000}
+  - {ticker: TRAN, date: "2019-09-27", fix: 21.6000}
+  - {ticker: TS, date: "2019-09-27", fix: 662.0000}
+  - {ticker: TXAR, date: "2019-09-27", fix: 15.3000}
+  - {ticker: VALO, date: "2019-09-27", fix: 6.1900}
+  - {ticker: YPFD, date: "2019-09-27", fix: 598.0000}
 
 # PENDIENTE
 # Solicitar a Primary S.A. el Excel completo de dividendos en especie

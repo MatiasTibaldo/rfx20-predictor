@@ -66,6 +66,7 @@ class SplitAdjuster:
         self._splits: dict[str, list[dict[str, Any]]] = {}
         self._macro_events: list[dict[str, Any]] = []
         self._dirty_data: list[dict[str, Any]] = []
+        self._index_base_changes: list[dict[str, Any]] = []
         self._load(path)
 
     # ------------------------------------------------------------------ #
@@ -211,6 +212,64 @@ class SplitAdjuster:
         )
         return results
 
+    def get_index_base_changes(self) -> list[dict[str, Any]]:
+        """Return RFX20 index base/divisor change events, sorted by date descending.
+
+        Descending order matches :meth:`get_splits_for_ticker` — the correct
+        application order for backward adjustment.
+
+        Returns:
+            List of event dicts (keys: date, ratio, verified, notes). Empty
+            list if none are configured.
+        """
+        return sorted(self._index_base_changes, key=lambda e: e["date"], reverse=True)
+
+    def adjust_index_series(self, df: pl.DataFrame, price_col: str = "close") -> pl.DataFrame:
+        """Apply backward adjustment to the RFX20 index's own price series.
+
+        Same backward-adjustment convention as :meth:`adjust_series` (factor
+        = 1/ratio for rows before the event date, stacked for multiple
+        events), generalized to a single price column instead of an OHLC
+        ticker series. Source events: ``index_base_changes`` in
+        ``config/splits.yaml`` — see ``docs/decisions/base_change_oct2023.md``.
+
+        Args:
+            df: DataFrame with a ``date`` column and ``price_col``.
+            price_col: Name of the price column to adjust. Defaults to
+                ``close``.
+
+        Returns:
+            DataFrame with ``price_col`` backward-adjusted. Unchanged if no
+            index base-change events are configured.
+        """
+        events = self.get_index_base_changes()
+        if not events:
+            return df
+
+        df = df.with_columns(pl.lit(1.0).alias("_factor"))
+        cumulative_factor = 1.0
+        applied: list[str] = []
+
+        for event in events:  # DESC by date — most recent event first
+            event_date: datetime.date = event["date"]
+            cumulative_factor /= event["ratio"]
+            before_event = pl.col("date").cast(pl.Date) < pl.lit(event_date)
+            df = df.with_columns(
+                pl.when(before_event)
+                .then(pl.lit(cumulative_factor))
+                .otherwise(pl.col("_factor"))
+                .alias("_factor")
+            )
+            applied.append(f"{event_date}×{1.0 / event['ratio']:.6f}")
+
+        df = df.with_columns((pl.col(price_col) * pl.col("_factor")).alias(price_col)).drop("_factor")
+
+        logger.info(
+            f"[SplitAdjuster] RFX20 index: applied {len(applied)} base change(s) {applied} "
+            f"to column '{price_col}'."
+        )
+        return df
+
     def get_macro_events(self) -> pl.DataFrame:
         """Return macro events as a Polars DataFrame.
 
@@ -303,13 +362,24 @@ class SplitAdjuster:
         self._macro_events = raw.get("macro_events", [])
         self._dirty_data = raw.get("dirty_data", [])
 
+        for entry in raw.get("index_base_changes", []):
+            self._index_base_changes.append(
+                {
+                    "date": _to_date(entry["date"]),
+                    "ratio": float(entry["ratio"]),
+                    "verified": bool(entry.get("verified", False)),
+                    "notes": str(entry.get("notes", "")),
+                }
+            )
+
         total_splits = sum(len(v) for v in self._splits.values())
         tickers_with_splits = sorted(self._splits.keys())
         logger.info(
             f"[SplitAdjuster] Loaded {total_splits} split(s) "
             f"for {len(tickers_with_splits)} ticker(s): {tickers_with_splits} "
             f"| macro_events={len(self._macro_events)} "
-            f"| dirty_data={len(self._dirty_data)}"
+            f"| dirty_data={len(self._dirty_data)} "
+            f"| index_base_changes={len(self._index_base_changes)}"
         )
 
 

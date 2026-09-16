@@ -122,6 +122,21 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
   retorno diario no es pronosticable con este feature set — motiva Track B (Deep Learning)
   y refuerza que GARCH (volatilidad) es el hallazgo positivo de Bloque 2 hasta ahora.
 
+### Corrección de datos (16 sep 2026): composición RFX20 corrupta en sep-2019
+
+Explorando variables objetivo alternativas para Bloque 3 se encontraron y
+corrigieron precios de origen corruptos en `cartera_historica_201909{23..27}.csv`
+(y por herencia `historico_spot_rfx20.csv`) — confirmado contra el API
+histórico de MatbaRofex, error en la fuente, no en la ingesta. Corregido sin
+tocar `data/raw/` (config-driven en `processing/`, mismo patrón que BBAR/
+cambio de base oct-2023). `features.runner` ya re-ejecutado con el fix. Ver
+`docs/decisions/sept2019_composicion_corrupta.md` para el detalle completo,
+incluye 4 pendientes nuevos (recomposición de cartera desfasada 1 día hábil,
+tercer split BYMA no documentado ~2:1 en 2025/2026, MIRG con desvío crónico
+sin investigar, cluster menor may-2024). Pendiente decidir si se re-corre
+Bloque 2 completo dado el fix (afecta 0,24% de la serie, no se espera cambio
+de conclusión).
+
 ### Próximo paso (retomar acá)
 
 **Track A está completo, incluida la exploración de horizontes largos —

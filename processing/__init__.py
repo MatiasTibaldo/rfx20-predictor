@@ -18,7 +18,13 @@ Typical responsibilities:
 # can safely use relative imports without hitting partial-init cycles.
 from .adjustments import SplitAdjuster
 from .splits import SplitEvent, adjust_ticker, load_splits, run
-from .cleaner import apply_corrections, apply_corrections_all, load_dirty_data
+from .cleaner import (
+    apply_composition_price_corrections,
+    apply_corrections,
+    apply_corrections_all,
+    load_composition_price_corrections,
+    load_dirty_data,
+)
 from .filter import add_index_membership, add_index_membership_all
 from .returns import add_returns, add_returns_all
 from .dummies import add_dummies, add_dummies_all
@@ -38,7 +44,9 @@ __all__ = [
     # cleaner
     "apply_corrections",
     "apply_corrections_all",
+    "apply_composition_price_corrections",
     "load_dirty_data",
+    "load_composition_price_corrections",
     # filter
     "add_index_membership",
     "add_index_membership_all",
