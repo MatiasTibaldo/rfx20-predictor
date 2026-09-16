@@ -45,6 +45,7 @@ _STATE_PATH = _ROOT / "results" / "pipeline_state.json"
 _RAW_V1 = _ROOT / "data" / "raw" / "v1"
 _COMPOSITION_BASE = _ROOT / "data" / "raw" / "rfx20_composition"
 _PROCESSED_V1 = _ROOT / "data" / "processed" / "v1"
+_FEATURES_V1 = _ROOT / "data" / "features" / "v1"
 
 _PLOTLY_CONFIG: dict = {"displayModeBar": True, "scrollZoom": True}
 
@@ -150,7 +151,31 @@ def launch_node(node: dict) -> None:
 
 @st.cache_data(ttl=300)
 def load_rfx20_spot() -> pl.DataFrame | None:
+    """Load the RFX20 spot series, patched for known corrupted dates.
+
+    Applies the ``dirty_data`` correction for ticker ``RFX20`` (see
+    ``docs/decisions/sept2019_composicion_corrupta.md``) so every view fed by
+    this loader — summary metrics, the evolution chart, returns — reflects
+    the corrected series, not the raw corrupted spot.
+    """
     path = _RAW_V1 / "rfx20_spot.parquet"
+    if not path.exists():
+        return None
+    df = pl.read_parquet(path).rename({"value": "close"})
+    df = apply_corrections(df, ticker="RFX20").drop("data_patched")
+    return df.rename({"close": "value"})
+
+
+@st.cache_data(ttl=300)
+def load_technical_index() -> pl.DataFrame | None:
+    """Load the index-level features dataset (``date``, ``close``, ``log_return``, …).
+
+    This is the already-corrected, model-ready target series (base-change
+    adjustment + sept-2019 dirty-data patch applied by
+    ``features/target.py::build_index_target`` when Nodo 4 was last run) —
+    unlike ``load_rfx20_spot()``, no further patching is needed here.
+    """
+    path = _FEATURES_V1 / "technical_index.parquet"
     if not path.exists():
         return None
     return pl.read_parquet(path)
@@ -479,6 +504,65 @@ def fig_spot_line(
     )
     fig.update_yaxes(title_text="Valor índice (ARS)", secondary_y=False)
     fig.update_yaxes(title_text="Divisor", secondary_y=True, showgrid=False)
+    return fig
+
+
+def compute_return_outlier_bounds(returns: pl.Series, k: float = 3.0) -> tuple[float, float]:
+    """IQR-based outlier bounds: [Q1 - k*IQR, Q3 + k*IQR]. Same rule as
+    ``scripts/eda_target_exploration.py`` — kept in sync so the interactive
+    view and the offline EDA agree on what counts as an outlier."""
+    q1, q3 = returns.quantile(0.25), returns.quantile(0.75)
+    iqr = q3 - q1
+    return q1 - k * iqr, q3 + k * iqr
+
+
+def fig_returns_outliers(df: pl.DataFrame, range_label: str, k: float = 3.0) -> go.Figure:
+    """Índice log_return over time, with IQR outliers flagged as a separate
+    (status-colored) layer so they're never identity-by-color-alone."""
+    filtered = _range_filter(df, range_label).drop_nulls("log_return")
+    lo, hi = compute_return_outlier_bounds(df["log_return"], k=k)
+    outliers = filtered.filter((pl.col("log_return") < lo) | (pl.col("log_return") > hi))
+
+    fig = go.Figure()
+
+    fig.add_hrect(
+        y0=lo, y1=hi,
+        fillcolor="#898781", opacity=0.08, line_width=0,
+    )
+    for bound in (lo, hi):
+        fig.add_hline(y=bound, line=dict(color="#898781", width=1, dash="dot"))
+
+    fig.add_trace(
+        go.Scatter(
+            x=filtered["date"].to_list(),
+            y=filtered["log_return"].to_list(),
+            mode="lines",
+            line=dict(color="#2a78d6", width=1.2),
+            name="log_return",
+            hovertemplate="%{x}: %{y:.4f}<extra></extra>",
+        )
+    )
+    if not outliers.is_empty():
+        fig.add_trace(
+            go.Scatter(
+                x=outliers["date"].to_list(),
+                y=outliers["log_return"].to_list(),
+                mode="markers",
+                marker=dict(color="#d64550", size=9, line=dict(color="white", width=1)),
+                name=f"outlier (fuera de ±{k:.1f}×IQR)",
+                hovertemplate="%{x}: %{y:.4f}<extra></extra>",
+            )
+        )
+
+    fig.update_layout(
+        title="Retornos diarios del índice (log_return) y outliers",
+        xaxis_title="Fecha",
+        yaxis_title="log_return",
+        hovermode="x unified",
+        height=400,
+        margin=dict(l=0, r=0, t=40, b=0),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+    )
     return fig
 
 
@@ -1199,6 +1283,55 @@ def render_rfx20_tab() -> None:
         use_container_width=True,
         config=_PLOTLY_CONFIG,
     )
+
+    # --- Returns + outliers ---
+    st.subheader("Retornos diarios y outliers")
+    index_df = load_technical_index()
+    if index_df is None or "log_return" not in index_df.columns:
+        st.info(
+            "technical_index.parquet no encontrado o sin log_return. "
+            "Ejecutar el nodo de Features primero."
+        )
+    else:
+        c_range, c_k = st.columns([3, 1])
+        with c_range:
+            returns_range = st.radio(
+                "Rango",
+                range_options,
+                index=4,
+                horizontal=True,
+                key="returns_range",
+            )
+        with c_k:
+            k = st.number_input(
+                "Umbral (×IQR)",
+                min_value=1.0,
+                max_value=6.0,
+                value=3.0,
+                step=0.5,
+                key="returns_iqr_k",
+                help="Un punto se marca como outlier si cae fuera de [Q1 - k×IQR, Q3 + k×IQR].",
+            )
+        st.plotly_chart(
+            fig_returns_outliers(index_df, returns_range, k=k),
+            use_container_width=True,
+            config=_PLOTLY_CONFIG,
+        )
+
+        lo, hi = compute_return_outlier_bounds(index_df["log_return"], k=k)
+        outliers_df = (
+            index_df.drop_nulls("log_return")
+            .filter((pl.col("log_return") < lo) | (pl.col("log_return") > hi))
+            .select("date", "close", "log_return")
+            .with_columns(pl.col("log_return").abs().alias("abs_log_return"))
+            .sort("abs_log_return", descending=True)
+            .drop("abs_log_return")
+        )
+        st.caption(
+            f"{len(outliers_df)} outlier(s) sobre {len(index_df):,} días "
+            f"(umbral k={k:.1f}, bounds=[{lo:.4f}, {hi:.4f}])."
+        )
+        st.dataframe(outliers_df.to_pandas(), use_container_width=True, hide_index=True)
 
     if comp_df is None:
         st.info("Parquet rfx20_composition no encontrado.")
