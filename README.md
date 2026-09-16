@@ -26,7 +26,7 @@ Master's thesis project — Universidad Austral. Internal tool at Primary S.A.
 
 ```
 rfx20-predictor/
-├── config/             # Pydantic settings + splits.yaml (confirmed splits & macro events)
+├── config/             # Pydantic settings + data_corrections.yaml (confirmed splits & macro events)
 ├── storage/            # DuckDB + Parquet persistence layer
 ├── ingestion/          # Raw data acquisition from Primary S.A. API
 ├── processing/         # OHLCV cleaning, split adjustments (Nodo 3, done)
@@ -110,14 +110,14 @@ uv run python scripts/validate_variation.py --threshold 30
 ```
 
 Detects day-over-day price jumps (close→open) above the threshold.
-Results are cross-referenced against `config/splits.yaml` to classify
+Results are cross-referenced against `config/data_corrections.yaml` to classify
 each alert as a confirmed split, a macro event, or dirty data.
 
 ---
 
 ## Key configuration
 
-- **`config/splits.yaml`**: confirmed split events and macro dummies (PASO 2019,
+- **`config/data_corrections.yaml`**: confirmed split events and macro dummies (PASO 2019,
   elections 2023). Add new entries here when new splits are detected — no code changes needed.
 - **`docs/decisions/`**: methodological decision records, primary source for the
   thesis methodology section.

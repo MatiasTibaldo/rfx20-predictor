@@ -2,7 +2,7 @@
 
 **Fecha:** junio 2026  
 **Módulos afectados:** `ingestion/`, `processing/adjustments.py`  
-**Archivo de configuración:** `config/splits.yaml`
+**Archivo de configuración:** `config/data_corrections.yaml`
 
 ## Contexto
 
@@ -23,7 +23,7 @@ Cada alerta fue clasificada consultando:
 - https://www.digrin.com (splits históricos alternativos)
 
 ### Paso 3 — Decisión por caso
-Ver tabla completa en `config/splits.yaml` y sección correspondiente 
+Ver tabla completa en `config/data_corrections.yaml` y sección correspondiente 
 en `CLAUDE.md`.
 
 ## Lógica de ajuste backward
@@ -45,7 +45,7 @@ aplicados en orden descendente por fecha.
 Si se detectan nuevos splits en el futuro:
 1. Ejecutar `validate_variation.py` con `--threshold 30`
 2. Validar contra investing.com o digrin.com
-3. Agregar entrada en `config/splits.yaml`
+3. Agregar entrada en `config/data_corrections.yaml`
 4. Re-ejecutar `processing/adjustments.py` con `force=True`
 
 No se requiere modificar código.

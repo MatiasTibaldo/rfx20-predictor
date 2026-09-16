@@ -54,7 +54,7 @@ class ProcessingPipeline:
     Args:
         store: DuckDBStore for Parquet I/O. A default instance is created if None.
         version: Data version tag used for both input and output layers.
-        config_path: Path to splits.yaml. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to data_corrections.yaml. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
         enforce_index_only: Enfoque A (True, default) applies splits only for
             tickers in-index on the split date.
         horizons: Forward-return prediction horizons in business days.
@@ -76,7 +76,7 @@ class ProcessingPipeline:
     ) -> None:
         self._store = store or DuckDBStore()
         self._version = version
-        self._config_path = config_path or settings.SPLITS_CONFIG
+        self._config_path = config_path or settings.DATA_CORRECTIONS_CONFIG
         self._enforce_index_only = enforce_index_only
         self._horizons = horizons or list(settings.PREDICTION_HORIZONS)
         self._do_reconstruction = run_reconstruction

@@ -1,7 +1,7 @@
 """
 Data cleaning: patches known dirty values in OHLCV series.
 
-Reads the ``dirty_data`` section of config/splits.yaml and replaces
+Reads the ``dirty_data`` section of config/data_corrections.yaml and replaces
 erroneous field values with the validated ``fix`` value for each entry.
 Only entries that include a ``fix`` key are applied.
 """
@@ -20,13 +20,13 @@ from config.settings import settings
 
 
 def load_dirty_data(config_path: Path | None = None) -> pl.DataFrame:
-    """Parse the ``dirty_data`` section of splits.yaml into a DataFrame.
+    """Parse the ``dirty_data`` section of data_corrections.yaml into a DataFrame.
 
     Only entries that carry a ``fix`` key are included — entries without
     a fix are documentation-only annotations.
 
     Args:
-        config_path: Path to the YAML file. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to the YAML file. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Returns:
         DataFrame with columns: ``ticker`` (String), ``date`` (Date),
@@ -41,7 +41,7 @@ def load_dirty_data(config_path: Path | None = None) -> pl.DataFrame:
         "notes": pl.String,
     }
 
-    path = config_path or settings.SPLITS_CONFIG
+    path = config_path or settings.DATA_CORRECTIONS_CONFIG
     with path.open("r", encoding="utf-8") as fh:
         raw: dict[str, Any] = yaml.safe_load(fh) or {}
 
@@ -69,14 +69,14 @@ def apply_corrections(
 ) -> pl.DataFrame:
     """Patch known dirty values for a single ticker.
 
-    Reads entries from the ``dirty_data`` section of splits.yaml that have a
+    Reads entries from the ``dirty_data`` section of data_corrections.yaml that have a
     ``fix`` value, and replaces the erroneous field value on the specified date.
     Appends a boolean ``data_patched`` column (True only on patched rows).
 
     Args:
         df: OHLCV DataFrame with a ``date`` column (pl.Date).
         ticker: Instrument symbol (case-insensitive).
-        config_path: Path to the YAML file. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to the YAML file. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Returns:
         DataFrame with patched values and a ``data_patched`` (Boolean) column.
@@ -119,7 +119,7 @@ def apply_corrections(
 
 
 def load_composition_price_corrections(config_path: Path | None = None) -> pl.DataFrame:
-    """Parse the ``composition_price_corrections`` section of splits.yaml.
+    """Parse the ``composition_price_corrections`` section of data_corrections.yaml.
 
     See ``docs/decisions/sept2019_composicion_corrupta.md`` for the full
     investigation: the ``close`` embedded in ``rfx20_composition.parquet``
@@ -128,7 +128,7 @@ def load_composition_price_corrections(config_path: Path | None = None) -> pl.Da
     error is in the source, not in ingestion. ``quantity`` is unaffected.
 
     Args:
-        config_path: Path to the YAML file. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to the YAML file. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Returns:
         DataFrame with columns ``ticker`` (String), ``date`` (Date),
@@ -136,7 +136,7 @@ def load_composition_price_corrections(config_path: Path | None = None) -> pl.Da
     """
     _EMPTY_SCHEMA = {"ticker": pl.String, "date": pl.Date, "fix": pl.Float64}
 
-    path = config_path or settings.SPLITS_CONFIG
+    path = config_path or settings.DATA_CORRECTIONS_CONFIG
     with path.open("r", encoding="utf-8") as fh:
         raw: dict[str, Any] = yaml.safe_load(fh) or {}
 
@@ -172,7 +172,7 @@ def apply_composition_price_corrections(
     Args:
         df: Long-format composition DataFrame with ``date``, ``ticker``,
             ``close`` columns.
-        config_path: Path to the YAML file. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to the YAML file. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Returns:
         DataFrame with ``close`` patched and an appended ``price_corrected``
@@ -205,7 +205,7 @@ def apply_corrections_all(
 
     Args:
         dfs: Mapping of ticker → OHLCV DataFrame.
-        config_path: Path to the YAML file. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to the YAML file. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Returns:
         New dict with the same keys and DataFrames with patches applied.

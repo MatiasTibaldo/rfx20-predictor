@@ -1,7 +1,7 @@
 """
 Split adjustment for OHLCV series.
 
-Loads split events from config/splits.yaml and applies backward price adjustment
+Loads split events from config/data_corrections.yaml and applies backward price adjustment
 to raw OHLCV Parquet files, writing adjusted files to data/processed/.
 
 Adjustment method: backward (all historical prices before the split date are
@@ -29,7 +29,7 @@ from loguru import logger
 from config.settings import settings
 from storage.store import DuckDBStore
 
-_SPLITS_CONFIG = Path(__file__).resolve().parents[1] / "config" / "splits.yaml"
+_SPLITS_CONFIG = Path(__file__).resolve().parents[1] / "config" / "data_corrections.yaml"
 
 
 @dataclass(frozen=True)
@@ -57,7 +57,7 @@ def load_splits(path: Path = _SPLITS_CONFIG) -> dict[str, list[SplitEvent]]:
     """Parse split events from the YAML config, grouped by ticker.
 
     Args:
-        path: Path to the splits YAML file. Defaults to config/splits.yaml.
+        path: Path to the splits YAML file. Defaults to config/data_corrections.yaml.
 
     Returns:
         Dict mapping ticker (uppercase) to a list of SplitEvent sorted by
@@ -146,7 +146,7 @@ def run(
 ) -> dict[str, bool]:
     """Apply split adjustments to raw OHLCV Parquet files and save to processed/.
 
-    Tickers without entries in splits.yaml are copied to processed/ without
+    Tickers without entries in data_corrections.yaml are copied to processed/ without
     modification, ensuring the processed layer is complete regardless of
     whether a ticker had splits.
 

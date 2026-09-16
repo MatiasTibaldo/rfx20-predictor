@@ -2,7 +2,7 @@
 
 **Fecha:** 16 de septiembre de 2026
 **Módulos afectados:** `processing/cleaner.py`, `features/target.py`, `app.py`,
-`config/splits.yaml`
+`config/data_corrections.yaml`
 
 ## Contexto
 
@@ -119,12 +119,12 @@ splits futuros.
   | 2024-05-13 → 2025-05-23 | 2 |
   | desde 2025-05-26 | 1 |
 
-  Los dos splits ya documentados en `splits.yaml` (10:1 en 2022, 5:1 en 2024)
+  Los dos splits ya documentados en `data_corrections.yaml` (10:1 en 2022, 5:1 en 2024)
   solo explicaban un factor acumulado de 50x, no 100x. **Resuelto (16 sep
   2026):** el alumno confirmó contra el historial oficial de splits de BYMA
   un tercer desdoblamiento **2:1 el 2025-05-25**, no documentado hasta ahora.
   Verificado en los datos: ratio=2.0 el 2025-05-23, ratio=1.0 el 2025-05-26.
-  Agregado a `splits:` en `config/splits.yaml`.
+  Agregado a `splits:` en `config/data_corrections.yaml`.
 
 Como septiembre 2019 es anterior al split BYMA de 2022, para esta ventana el
 factor crónico de BYMA es ×100 y el de YPFD es ×10 — hay que tenerlo en cuenta
@@ -137,11 +137,11 @@ Igual que en los casos ya resueltos (BBAR en `dirty_data`, cambio de base
 oct-2023 en `index_base_changes`): **no se edita ningún archivo de
 `data/raw/`** (son inmutables por convención del proyecto). La corrección se
 aplica en la capa de `processing/`, de forma declarativa desde
-`config/splits.yaml`, reproducible y documentada.
+`config/data_corrections.yaml`, reproducible y documentada.
 
 ### Composición (`rfx20_composition.parquet`)
 
-Nueva sección `composition_price_corrections` en `splits.yaml` (100 entradas:
+Nueva sección `composition_price_corrections` en `data_corrections.yaml` (100 entradas:
 20 tickers × 5 fechas, 2019-09-23 → 2019-09-27). `fix` = `close` del OHLCV
 canónico para ese ticker/fecha, excepto:
 
@@ -215,7 +215,7 @@ esto.
    marca el 2019-10-01. Podría repetirse en otras recomposiciones trimestrales
    de toda la serie 2018-2026 — no se auditó ese alcance todavía.
 2. ~~Tercer split de BYMA no documentado~~ — **resuelto (16 sep 2026)**:
-   2:1 el 2025-05-25, confirmado por el alumno y agregado a `splits.yaml`.
+   2:1 el 2025-05-25, confirmado por el alumno y agregado a `data_corrections.yaml`.
 3. **MIRG**: 970 días (~mitad de la historia) con desvío composición-vs-OHLCV
    no investigado — candidato a tener un split propio no documentado, mismo
    mecanismo que YPFD/BYMA.

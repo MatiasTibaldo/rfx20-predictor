@@ -2,7 +2,7 @@
 
 **Fecha:** junio 2026  
 **Fuente:** Consulta directa con el equipo que mantiene el índice en Primary S.A.  
-**Módulos afectados:** `processing/adjustments.py`, `config/splits.yaml`
+**Módulos afectados:** `processing/adjustments.py`, `config/data_corrections.yaml`
 
 ## Tipos de eventos en base.dividendos2.csv
 
@@ -92,7 +92,7 @@ dividendos en acciones normales.
 ## Decisión para el módulo processing/
 
 1. Al procesar base.dividendos2.csv, clasificar AC >= 1 como split_encubierto
-2. Agregar estos eventos a config/splits.yaml con tipo: "ac_split"
+2. Agregar estos eventos a config/data_corrections.yaml con tipo: "ac_split"
 3. El ajuste de precio para estos casos sigue la misma lógica backward
    que los splits confirmados
 4. Documentar en la tesis que la distinción entre split puro y 

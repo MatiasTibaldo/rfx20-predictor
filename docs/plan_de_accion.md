@@ -12,7 +12,7 @@ repositorio (2026-04-06) y Nodo 4 (features) todavía no arrancó.
 
 - Nodo 1 — Composición histórica (27 tickers, 2018→hoy)
 - Nodo 2 — Ingesta OHLCV de los 27 componentes
-- Ajuste por splits (`processing/adjustments.py` + `config/splits.yaml`)
+- Ajuste por splits (`processing/adjustments.py` + `config/data_corrections.yaml`)
 - Nodo 3 — `processing/` completo: filtro `in_index`, corrección de datos sucios,
   retornos log, dummies macro, datasets wide/long, reconstrucción del índice
 - Datos macro consolidados en `data/raw/macro/` (dólares, riesgo país, tasa PF, IPC, Merval)

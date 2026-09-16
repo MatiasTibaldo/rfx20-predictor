@@ -2,7 +2,7 @@
 Dummy variables for macro events.
 
 Appends boolean and directional indicator columns based on macro events
-loaded from config/splits.yaml.
+loaded from config/data_corrections.yaml.
 
 """
 
@@ -24,13 +24,13 @@ def add_dummies(
 
     Columns added:
     - ``is_macro_event`` (Boolean): True on dates listed in ``macro_events``
-      in splits.yaml.
+      in data_corrections.yaml.
     - ``macro_direction`` (Int8): +1 for positive events, -1 for negative,
       0 otherwise.
 
     Args:
         df: OHLCV DataFrame with a ``date`` (pl.Date) column.
-        config_path: Path to splits.yaml. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to data_corrections.yaml. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Returns:
         DataFrame with appended dummy columns.
@@ -51,7 +51,7 @@ def add_dummies_all(
 
     Args:
         dfs: Mapping of ticker -> OHLCV DataFrame.
-        config_path: Path to splits.yaml. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to data_corrections.yaml. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Returns:
         New dict with the same keys and DataFrames augmented with dummy columns.

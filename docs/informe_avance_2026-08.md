@@ -42,7 +42,7 @@ de variación diaria close→open), tres categorías de anomalías en las series
 - **Dato sucio puntual**: BBAR 11/06/2019 (apertura anómala corregida manualmente).
 
 Se implementó **ajuste backward** (precio actual como referencia) en
-`processing/adjustments.py`, parametrizado desde `config/splits.yaml`. Se definieron
+`processing/adjustments.py`, parametrizado desde `config/data_corrections.yaml`. Se definieron
 dos enfoques posibles: ajustar solo splits donde el ticker integraba el índice en la
 fecha del evento (Enfoque A, adoptado como default) o ajustar toda la serie histórica
 del ticker (Enfoque B). **Se usó el Enfoque A.**

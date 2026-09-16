@@ -116,6 +116,31 @@ macro_events:
     direction: "positive"
     notes: "Suba sistémica del mercado. No requiere ajuste de serie."
 
+  - date: "2024-07-15"
+    description: "Inicio de la 'Fase 2' del plan económico (control monetario/inflacionario estricto, sacrificando acumulación de reservas)"
+    tickers_affected: ["TXAR", "TECO2", "TRAN", "CEPU", "TGSU2", "SUPV", "METR", "CRES", "ALUA", "GGAL", "LOMA", "BMA", "BBAR", "PAMP", "EDN", "TGNO4", "BYMA", "YPFD", "MIRG", "COME", "CVH", "MORI", "IRSA", "VALO", "AGRO"]
+    direction: "negative"
+    notes: >
+      Caída sistémica confirmada (25/25 tickers negativos, mediana ~-12.2%,
+      log_return del índice -0.131). No requiere ajuste de serie — identificado
+      inicialmente como outlier sin explicar, contextualizado por el alumno
+      (16 sep 2026).
+
+  - date: "2025-09-08"
+    description: >
+      "Lunes negro" post-elecciones legislativas de Buenos Aires (07/09/2025):
+      derrota de La Libertad Avanza frente al peronismo. Derrumbe de acciones
+      y bonos (Merval -13%, ADRs hasta -24%, bonos soberanos hasta -10%),
+      riesgo país cruzó 1.000 pb, dólar minorista +$45 en el día.
+    tickers_affected: ["SUPV", "GGAL", "BBAR", "BMA", "EDN", "METR", "MORI", "TGSU2", "BYMA", "PAMP", "ECOG", "TECO2", "YPFD", "COME", "CEPU", "TGNO4", "AGRO", "LOMA", "IRSA", "VALO", "MIRG", "CRES", "CVH", "TRAN"]
+    direction: "negative"
+    notes: >
+      Caída sistémica confirmada (24/26 tickers negativos, mediana ~-11.1%,
+      bancos los más golpeados: SUPV -20.6%, GGAL -20.1%, BBAR -20.1%, BMA
+      -19.5%; log_return del índice -0.152). No requiere ajuste de serie —
+      identificado inicialmente como outlier sin explicar, contextualizado
+      por el alumno (16 sep 2026).
+
 # Cambios de base/divisor del propio índice RFX20 (no de un ticker individual).
 # Tratamiento idéntico a un split: ajuste retroactivo hacia atrás, para que el
 # retorno calculado en el borde refleje movimiento real de mercado y no el

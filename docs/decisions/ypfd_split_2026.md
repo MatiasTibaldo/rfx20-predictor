@@ -2,13 +2,13 @@
 
 **Fecha:** agosto 2026
 **Módulos afectados:** ninguno (verificación, sin cambios de código)
-**Archivo de configuración:** `config/splits.yaml` (sin nueva entrada)
+**Archivo de configuración:** `config/data_corrections.yaml` (sin nueva entrada)
 
 ## Contexto
 
 YPFD realizó un split 10:1 con fecha efectiva 2026-08-03. A diferencia de
 los splits de COME, AGRO, MORI y BYMA (ver `splits_adjustment.md`), este
-evento no requirió agregar una entrada en `config/splits.yaml`.
+evento no requirió agregar una entrada en `config/data_corrections.yaml`.
 
 ## Verificación
 
@@ -41,7 +41,7 @@ normal de mercado, sin discontinuidad artificial.
 
 ## Decisión
 
-No se agrega entrada en `config/splits.yaml` ni se modifica
+No se agrega entrada en `config/data_corrections.yaml` ni se modifica
 `processing/adjustments.py` para YPFD. Tanto el precio como la
 composición del índice ya vienen resueltos en la fuente (PMY/Matriz),
 de forma sincronizada, por lo que la reconstrucción del índice

@@ -1,7 +1,7 @@
 """
 Backward split adjustment for OHLCV series.
 
-Reads split events, macro events, and dirty-data flags from config/splits.yaml
+Reads split events, macro events, and dirty-data flags from config/data_corrections.yaml
 and exposes them through SplitAdjuster for use in the processing pipeline.
 
 Adjustment convention
@@ -25,7 +25,7 @@ correct cumulative adjustment automatically:
 Enforce modes
 -------------
 enforce_index_only=True  (Enfoque A, default)
-    Only apply splits where in_index=True in splits.yaml.
+    Only apply splits where in_index=True in data_corrections.yaml.
     Suitable when the target variable is the RFX20 index level, where only
     in-index constituents affect index computation.
 
@@ -52,7 +52,7 @@ class SplitAdjuster:
     """Load split configuration and apply backward price adjustments to OHLCV data.
 
     Args:
-        config_path: Path to the YAML file. Defaults to ``settings.SPLITS_CONFIG``.
+        config_path: Path to the YAML file. Defaults to ``settings.DATA_CORRECTIONS_CONFIG``.
 
     Attributes:
         _splits: Dict mapping uppercase ticker → list of split dicts, each
@@ -62,7 +62,7 @@ class SplitAdjuster:
     """
 
     def __init__(self, config_path: Path | None = None) -> None:
-        path = config_path or settings.SPLITS_CONFIG
+        path = config_path or settings.DATA_CORRECTIONS_CONFIG
         self._splits: dict[str, list[dict[str, Any]]] = {}
         self._macro_events: list[dict[str, Any]] = []
         self._dirty_data: list[dict[str, Any]] = []
@@ -231,7 +231,7 @@ class SplitAdjuster:
         = 1/ratio for rows before the event date, stacked for multiple
         events), generalized to a single price column instead of an OHLC
         ticker series. Source events: ``index_base_changes`` in
-        ``config/splits.yaml`` — see ``docs/decisions/base_change_oct2023.md``.
+        ``config/data_corrections.yaml`` — see ``docs/decisions/base_change_oct2023.md``.
 
         Args:
             df: DataFrame with a ``date`` column and ``price_col``.

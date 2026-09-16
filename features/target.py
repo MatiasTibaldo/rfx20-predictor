@@ -32,7 +32,7 @@ def build_index_target(
        ``docs/decisions/sept2019_composicion_corrupta.md``), on the raw
        nominal scale.
     2. The backward base-change adjustment (``index_base_changes`` in
-       ``config/splits.yaml``), so documented divisor changes of the index
+       ``config/data_corrections.yaml``), so documented divisor changes of the index
        itself (e.g. the Oct-2023 rebase) don't leak into ``log_return`` as
        fake single-day moves. See ``docs/decisions/base_change_oct2023.md``.
 

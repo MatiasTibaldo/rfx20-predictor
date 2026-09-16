@@ -11,10 +11,10 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
 - Nodo 1: Composición histórica (27 tickers, 2018→hoy) — raw/rfx20_composition.parquet
 - Nodo 2: Series OHLCV 27 instrumentos (2018→hoy) — raw/{ticker}\_ohlcv.parquet
 - App Streamlit: visualización y validación de datos (app.py)
-- Módulo de ajuste por splits: processing/adjustments.py + config/splits.yaml
+- Módulo de ajuste por splits: processing/adjustments.py + config/data_corrections.yaml
 - **Nodo 3: Módulo processing/ completo**
   - `processing/filter.py` — flag `in_index` por fecha (no se filtran filas, ver docs/decisions/index_membership_flag.md)
-  - `processing/cleaner.py` — corrección datos sucios desde splits.yaml (BBAR 2019-06-11: open 260.0 → 145.25)
+  - `processing/cleaner.py` — corrección datos sucios desde data_corrections.yaml (BBAR 2019-06-11: open 260.0 → 145.25)
   - `processing/returns.py` — retornos log y simples, forward returns horizones [1, 3, 5]
   - `processing/dummies.py` — flags is_macro_event, macro_direction
   - `processing/wide_long.py` — datasets long y wide (ohlcv_long.parquet, ohlcv_wide.parquet)
@@ -137,6 +137,17 @@ sin investigar, cluster menor may-2024). Pendiente decidir si se re-corre
 Bloque 2 completo dado el fix (afecta 0,24% de la serie, no se espera cambio
 de conclusión).
 
+Con la vista de retornos/outliers agregada a Streamlit (ver sección de
+visualización más abajo) se revisaron los outliers restantes de `log_return`
+(9 con la regla 3×IQR post-fix): 2 ya documentados como `macro_events`
+(PASO 2019, balotaje 2023), 2 nuevos confirmados y agregados por el alumno
+(2024-07-15 — inicio Fase 2 del plan económico; 2025-09-08 — "lunes negro"
+post-elecciones legislativas PBA, Merval -13%), y 3 atribuibles al crash
+global de COVID marzo 2020 (09/16/18-03-2020, sin agregar todavía a
+`macro_events` — pendiente menor). El split BYMA de `data_corrections.yaml` ya cubre
+el tercer pendiente de la lista anterior. Quedan MIRG y el cluster de
+mayo-2024 sin investigar.
+
 ### Próximo paso (retomar acá)
 
 **Track A está completo, incluida la exploración de horizontes largos —
@@ -191,7 +202,7 @@ mejoras permanentes del protocolo compartido: el purge de CV
   `features/pipeline.py`. Parquet sigue siendo la interfaz real entre
   módulos; el CSV es solo una copia de lectura para inspección humana.
 - results/: experimentos DuckDB + pipeline_state.json
-- config/splits.yaml: splits confirmados y eventos macro
+- config/data_corrections.yaml: splits confirmados y eventos macro
 - docs/decisions/: registro de decisiones metodológicas
 
 #### data/raw/macro/ — Variables macroeconómicas disponibles
@@ -247,7 +258,7 @@ rfx20-predictor/
 ├── .python-version
 ├── app.py                     # Streamlit: monitor de pipeline + validación de datos
 │
-├── config/                    # Settings (Pydantic) + splits.yaml
+├── config/                    # Settings (Pydantic) + data_corrections.yaml
 ├── storage/                   # DuckDBStore: persistencia Parquet + tracking de experimentos
 ├── ingestion/                 # Nodo 1-2: composición, OHLCV, futuros RFX20
 ├── processing/                # Nodo 3: limpieza, ajustes, retornos, reconstrucción — completo
@@ -431,7 +442,7 @@ del siguiente. Se validaron manualmente contra fuentes externas
 (investing.com, digrin.com) y se clasificaron en tres categorías:
 
 **Categoría 1 — Splits NO ajustados en la API:**
-Confirmados y registrados en `config/splits.yaml`:
+Confirmados y registrados en `config/data_corrections.yaml`:
 
 - COME: split 1.7:1 del 05/08/2019 (dentro del período en el índice)
 - COME: split 2.2443:1 del 13/08/2025 (dentro del período en el índice)
@@ -456,7 +467,7 @@ Movimientos reales del mercado, NO requieren ajuste:
 **Decisión de ajuste:**
 Se implementó ajuste backward (precio actual como referencia,
 factores aplicados retroactivamente) mediante `processing/adjustments.py`.
-Los parámetros de ajuste se leen desde `config/splits.yaml` para
+Los parámetros de ajuste se leen desde `config/data_corrections.yaml` para
 permitir actualizaciones sin modificar código.
 
 Se adoptaron dos enfoques según el uso posterior:
@@ -491,5 +502,5 @@ metodología del trabajo final.
 
 - Split 10:1 el 2026-08-03. Verificado: precio y `cantidades_vigentes` de la
   composición ya vienen ajustados en la fuente (PMY/Matriz), de forma
-  sincronizada — no requiere entrada en `config/splits.yaml`. Ver
+  sincronizada — no requiere entrada en `config/data_corrections.yaml`. Ver
   docs/decisions/ypfd_split_2026.md para el detalle.
