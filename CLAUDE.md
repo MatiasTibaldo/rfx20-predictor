@@ -232,12 +232,48 @@ global de COVID marzo 2020 (09/16/18-03-2020, sin agregar todavía a
 el tercer pendiente de la lista anterior. Quedan MIRG y el cluster de
 mayo-2024 sin investigar.
 
+### Re-corrida de Bloque 2 post-fix (16 sep 2026) — GARCH ya no es positivo
+
+Se re-corrieron los 10 modelos de Bloque 2 (ARIMA, GARCH, SVM, RF, XGBoost,
+LightGBM, LSTM, GRU, CNN-LSTM, TFT-lite) sobre `features_long.parquet` ya
+corregido. **Hallazgo principal: el naive de GARCH (varianza incondicional
+de train) estaba inflado ~39% por los retornos corruptos de sep-2019 (al
+cuadrado, ±60% pesa desproporcionadamente) — corregido, GARCH pasa de "-39%
+vs. naive" a "+1% vs. naive" en los tres horizontes. Bloque 2 ya no tiene
+un hallazgo positivo** (los 10 modelos ahora empatados o levemente peores
+que su naive respectivo). Dirección no cambia de conclusión; dos mejoras
+notables sin cambiar el resultado final: XGBoost dejó de sobreajustar tan
+fuerte (+61%→+3.6% en h=1) y TFT-lite h=5 dejó de tener una predicción
+inestable (+18.6%→+3.5%). Detalle completo y tabla de los 9 modelos de
+dirección: `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`
+(sección de actualización) y `docs/decisions/sept2019_composicion_corrupta.md`.
+Figuras estáticas (`docs/figures/`) y predicciones (`results/track_a/`,
+`results/track_b/`) regeneradas con la nueva corrida.
+
+**Chequeo de robustez del naive de GARCH (16 sep 2026) — cerrado.** Se
+agregó un naive alternativo winsorizado (recorte 1%/99%,
+`models/statistical/garch_runner.py::_winsorized_variance`) para descartar
+que la reversión de GARCH fuera un artefacto de un naive sensible a
+outliers. Resultado: el naive winsorizado es igual o levemente peor que el
+crudo (esperable, la varianza muestral cruda ya minimiza MSE por
+construcción) y GARCH sigue perdiendo contra ambos — la reversión se
+sostiene, no era un artefacto de la métrica de referencia. No queda
+ninguna línea abierta de este lado; Bloque 2 se da por cerrado con
+resultado negativo en las dos dimensiones (dirección y volatilidad).
+
 ### Próximo paso (retomar acá)
 
-**Track A está completo, incluida la exploración de horizontes largos —
-sin líneas pendientes.** Lo siguiente en el plan de acción es **Track B
-(Deep Learning: LSTM, GRU, evaluación preliminar de TFT/híbrido CNN-LSTM)**,
-todavía sin arrancar código.
+**Bloque 2 completo (Track A + Track B), con visualización, re-corrido
+post-fix.** Sigue **Bloque 3: comparación y selección** — framework de
+evaluación multicriterio (RMSE/MAE/MAPE, hit ratio, backtesting con
+Sharpe/drawdown, robustez por régimen de volatilidad) y selección del
+modelo final — todavía sin arrancar código. **Nota importante:** con el
+resultado de GARCH revertido, Bloque 2 ya no deja un "lado ganador"
+(ni dirección ni volatilidad) — la evaluación de ensamble planeada para
+Bloque 3 pierde su base (no tiene sentido combinar modelos que ya empatan
+con su naive, y ya no hay un modelo de volatilidad positivo para explorar
+combinaciones de ese lado). Vale la pena discutir con el alumno el alcance
+de Bloque 3 antes de arrancar código.
 
 **Pregunta que quedó abierta (6-7 sep 2026) — ya resuelta (8 sep 2026):**
 se evaluó extender a horizontes largos (10/21 días hábiles, ~2 semanas/1

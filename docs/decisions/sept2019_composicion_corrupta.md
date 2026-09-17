@@ -207,6 +207,28 @@ dataset de features ya sale corregido (`features.runner` fue re-ejecutado);
 queda pendiente decidir si vale la pena re-correr Bloque 2 completo solo por
 esto.
 
+**Actualización (16 sep 2026) — se re-corrió Bloque 2 completo (los 9 modelos
+de dirección + GARCH).** Resultado, comparado contra lo ya documentado:
+
+- **Dirección (9 modelos):** conclusión sin cambios — todos siguen
+  empatados o levemente peores que su naive, ninguno cruza a "mejor que
+  naive". Dos mejoras notables pero que no cambian la conclusión: XGBoost
+  dejó de sobreajustar tan fuerte (de +61%/+42%/+6% peor que naive a
+  +3.6%/+0.9%/+0.6%) y TFT-lite h=5 dejó de tener una predicción inestable
+  (de +18.6% peor a +3.5% peor). Ambos eran síntomas de ajustar sobre los
+  retornos corruptos de sep-2019 en train.
+- **Volatilidad (GARCH) — cambia la conclusión.** El naive de GARCH usa la
+  varianza incondicional de train, que estaba inflada ~39% por los
+  retornos corruptos (al cuadrado, ±60% pesa enormemente). Corregido, el
+  naive baja de ~4.52e-3 a ~2.75e-3 RMSE, y GARCH pasa de "-39% vs. naive"
+  a **"+1% vs. naive"** en los tres horizontes — el mismo empate que el
+  resto de Bloque 2. **Bloque 2 ya no tiene un hallazgo positivo.** Ver el
+  detalle completo en `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`
+  (actualizada) y `docs/decisions/garch_volatility_track_a.md` (actualizada).
+
+Esto resuelve el pendiente de arriba: sí valió la pena re-correr — cambió
+la conclusión central del proyecto (ya no hay un "lado ganador").
+
 ## Pendientes
 
 1. **Recomposición de cartera desfasada 1 día hábil** (hallazgo #4): el

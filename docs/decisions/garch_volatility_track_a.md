@@ -1,5 +1,43 @@
 # Decisión: baseline GARCH sobre volatilidad condicional (Bloque 2, Track A, Etapa 2)
 
+> **⚠️ Actualización (16 sep 2026):** el resultado de este documento (GARCH
+> reduce ~39% el RMSE vs. naive) quedó obsoleto tras corregir el precio de
+> composición corrupto de sep-2019
+> (`docs/decisions/sept2019_composicion_corrupta.md`) — ese error inflaba la
+> varianza incondicional de train (el naive de este experimento) en ~39%,
+> porque la varianza pondera al cuadrado y los retornos corruptos eran de
+> ±60%. Con datos corregidos, GARCH queda ~1% **peor** que naive en los tres
+> horizontes — mismo patrón de empate que el resto de Bloque 2. Ver el
+> detalle completo en `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`
+> (sección de actualización) y `docs/decisions/sept2019_composicion_corrupta.md`
+> ("Impacto en Bloque 2"). El resto de este documento (metodología, orden
+> GARCH(1,1) t-Student, walk-forward) sigue vigente sin cambios — solo el
+> resultado numérico y su lectura quedaron desactualizados.
+>
+> **Chequeo adicional (16 sep 2026): ¿el naive sigue siendo injusto con GARCH
+> por ser sensible a outliers?** El naive usa varianza incondicional de train,
+> que pondera al cuadrado — sensible por diseño incluso a eventos reales
+> (PASO 2019, elecciones, COVID). Se probó un naive alternativo winsorizado
+> (recorte 1%/99% de `log_return` antes de calcular la varianza,
+> `models/statistical/garch_runner.py::_winsorized_variance`) para ver si
+> reabría la ventaja de GARCH:
+>
+> | horizonte | RMSE naive (crudo) | RMSE naive (winsorizado) | RMSE GARCH |
+> |---|---|---|---|
+> | 1 | 2.7481e-3 | 2.7547e-3 | 2.7724e-3 |
+> | 3 | 2.7484e-3 | 2.7549e-3 | 2.7799e-3 |
+> | 5 | 2.7487e-3 | 2.7550e-3 | 2.7849e-3 |
+>
+> El naive winsorizado (varianza de train 20.4% menor) resulta **igual o
+> levemente peor** que el naive crudo en ambas métricas (RMSE y QLIKE), no
+> mejor — y GARCH sigue perdiendo contra los dos. Tiene sentido
+> estadísticamente: la varianza muestral cruda es, por construcción, el
+> estimador que minimiza el error cuadrático medio contra el target real
+> (asumiendo estacionariedad train→val); winsorizarla introduce un sesgo que
+> solo puede empeorar el RMSE, no mejorarlo. **Conclusión: la reversión de
+> GARCH no es un artefacto de un naive injusto — se sostiene con al menos
+> dos definiciones razonables de naive.** Se descarta seguir por esta línea.
+
 **Fecha:** 5 de septiembre de 2026
 **Módulos:** `models/statistical/garch.py`, `models/statistical/garch_runner.py`
 

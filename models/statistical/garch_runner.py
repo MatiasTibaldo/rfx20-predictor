@@ -27,6 +27,20 @@ MLRUNS_DB = settings.PROJECT_ROOT / "mlruns.db"
 PREDICTIONS_PATH = settings.RESULTS_DIR / "track_a" / "garch_val_predictions.parquet"
 
 
+def _winsorized_variance(returns: np.ndarray, lower_pct: float = 1.0, upper_pct: float = 99.0) -> float:
+    """Variance of ``returns`` after clipping tails at the given percentiles.
+
+    Same rationale as ``scripts/eda_target_exploration.py``'s winsorization:
+    variance weights outliers quadratically, so a handful of genuine but
+    extreme events (PASO 2019, elections, COVID-2020, etc. — real market
+    moves, not data errors, see ``config/data_corrections.yaml::macro_events``)
+    can dominate an unconditional-variance estimate. Winsorizing caps their
+    influence without deleting or fabricating any observation.
+    """
+    lo, hi = np.percentile(returns, [lower_pct, upper_pct])
+    return float(np.var(np.clip(returns, lo, hi)))
+
+
 def _naive_variance_metrics(
     df: pl.DataFrame, train_variance: float, horizons: list[int]
 ) -> dict[int, dict[str, float]]:
@@ -62,6 +76,7 @@ def main(
 
     train_log_return = df.filter(pl.col("split") == "train")["log_return"].drop_nulls().to_numpy()
     train_variance = float(np.var(train_log_return))
+    train_variance_winsorized = _winsorized_variance(train_log_return)
 
     logger.info(
         "[track_a.garch_runner] Comparing Normal vs Student-t (grid search by AIC on train)..."
@@ -89,6 +104,7 @@ def main(
     )
     garch_metrics = compute_variance_metrics(wf_result.predictions)
     naive_metrics = _naive_variance_metrics(df, train_variance, horizons)
+    naive_metrics_winsorized = _naive_variance_metrics(df, train_variance_winsorized, horizons)
 
     predictions_path.parent.mkdir(parents=True, exist_ok=True)
     wf_result.predictions.write_parquet(predictions_path)
@@ -109,6 +125,7 @@ def main(
                 "n_val_dates": wf_result.n_attempted,
                 "n_failed_refits": wf_result.n_failed,
                 "train_unconditional_variance": train_variance,
+                "train_unconditional_variance_winsorized_1_99": train_variance_winsorized,
             }
         )
         for h in horizons:
@@ -116,6 +133,8 @@ def main(
             mlflow.log_metric(f"qlike_h{h}", garch_metrics[h]["qlike"])
             mlflow.log_metric(f"naive_rmse_var_h{h}", naive_metrics[h]["rmse"])
             mlflow.log_metric(f"naive_qlike_h{h}", naive_metrics[h]["qlike"])
+            mlflow.log_metric(f"naive_winsorized_rmse_var_h{h}", naive_metrics_winsorized[h]["rmse"])
+            mlflow.log_metric(f"naive_winsorized_qlike_h{h}", naive_metrics_winsorized[h]["qlike"])
         mlflow.log_artifact(str(predictions_path))
 
     print(
@@ -127,11 +146,20 @@ def main(
     )
     print(f"Orden seleccionado: GARCH({best.p},{best.q}), dist={best.dist!r} (AIC={best.aic:.2f})")
     print(f"Refits: {wf_result.n_attempted - wf_result.n_failed}/{wf_result.n_attempted} ok\n")
-    print(f"{'Horizonte':<10}{'RMSE (GARCH)':<16}{'RMSE (naive)':<16}{'QLIKE (GARCH)':<16}{'QLIKE (naive)':<16}")
+    print(
+        f"Varianza incondicional de train: cruda={train_variance:.6e}  "
+        f"winsorizada(1/99)={train_variance_winsorized:.6e}  "
+        f"(reducción {(1 - train_variance_winsorized / train_variance) * 100:.1f}%)\n"
+    )
+    print(
+        f"{'Horizonte':<10}{'RMSE (GARCH)':<16}{'RMSE (naive)':<16}"
+        f"{'RMSE (naive wins.)':<20}{'QLIKE (GARCH)':<16}{'QLIKE (naive)':<16}{'QLIKE (naive wins.)':<20}"
+    )
     for h in horizons:
-        g, n = garch_metrics[h], naive_metrics[h]
+        g, n, nw = garch_metrics[h], naive_metrics[h], naive_metrics_winsorized[h]
         print(
-            f"{h:<10}{g['rmse']:<16.6e}{n['rmse']:<16.6e}{g['qlike']:<16.6f}{n['qlike']:<16.6f}"
+            f"{h:<10}{g['rmse']:<16.6e}{n['rmse']:<16.6e}{nw['rmse']:<20.6e}"
+            f"{g['qlike']:<16.6f}{n['qlike']:<16.6f}{nw['qlike']:<20.6f}"
         )
 
 

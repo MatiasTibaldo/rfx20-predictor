@@ -1,5 +1,16 @@
 # Resultado: XGBoost (Bloque 2, Track A ML, Etapa 3)
 
+> **Actualización (16 sep 2026):** re-corrido tras el fix de composición
+> de sep-2019 (`docs/decisions/sept2019_composicion_corrupta.md`). El
+> sobreajuste severo documentado abajo (+61%/+42%/+6% peor que naive) se
+> redujo a **+3.6%/+0.9%/+0.6%**, en línea con SVM/RF/LightGBM — XGBoost
+> ya no es un outlier del grupo ML. Consistente con que el modelo estaba
+> ajustando ruido alrededor de los retornos corruptos (±60%) de sep-2019,
+> presentes en train. No cambia la conclusión de síntesis (dirección no
+> pronosticable): sigue empatado/levemente peor que naive, nunca mejor.
+> Ver `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md` para
+> la comparación completa de los 9 modelos de dirección.
+
 **Fecha:** 5 de septiembre de 2026
 **Módulo:** `models/ml/xgboost_runner.py` (protocolo compartido en `models/ml/common.py`)
 **Dependencia agregada:** `xgboost` (`uv add xgboost`) — nota: arrastra

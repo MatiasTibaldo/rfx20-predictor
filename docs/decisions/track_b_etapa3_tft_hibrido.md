@@ -1,5 +1,13 @@
 # Resultado: híbrido CNN-LSTM + "TFT-lite" (Bloque 2, Track B, Etapa 3 — cierre del track)
 
+> **Actualización (16 sep 2026):** re-corrido tras el fix de composición de
+> sep-2019 (`docs/decisions/sept2019_composicion_corrupta.md`). La
+> predicción inestable de TFT-lite en h=5 (nota más abajo, RMSE +18.6%
+> peor que naive) se resolvió: ahora +3.5% peor, en línea con el resto de
+> horizontes/modelos. CNN-LSTM sin cambios relevantes. No cambia la
+> conclusión de síntesis — ver
+> `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`.
+
 **Fecha:** 15 de septiembre de 2026
 **Módulos:** `models/deep_learning/cnn_lstm.py` + `cnn_lstm_runner.py`,
 `models/deep_learning/tft_lite.py` + `tft_lite_runner.py`.

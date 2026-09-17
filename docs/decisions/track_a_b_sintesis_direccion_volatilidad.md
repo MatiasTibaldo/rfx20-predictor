@@ -1,5 +1,58 @@
 # Síntesis de Bloque 2 (Track A + Track B): dirección no pronosticable, volatilidad sí
 
+> ## ⚠️ Actualización (16 sep 2026) — el hallazgo de volatilidad se revirtió
+>
+> Tras corregir el precio corrupto de composición de 2019-09-23→27
+> (`docs/decisions/sept2019_composicion_corrupta.md`) se re-corrió toda la
+> batería de Bloque 2. **La sección "Evidencia: volatilidad condicional" de
+> este documento (más abajo) queda obsoleta** — se conserva sin editar como
+> registro histórico, pero la conclusión ya no es válida.
+>
+> **Qué cambió:** el naive de GARCH usa la varianza incondicional de train
+> como baseline (`train_variance`, en `models/statistical/garch_runner.py`).
+> El retorno corrupto de sep-2019 (±60%, dos días) contribuía
+> desproporcionadamente a esa varianza (por estar al cuadrado: 0.6² = 0.36
+> vs. ~0.0004 típico) — inflaba el naive en un ~39%. Al corregirlo, el naive
+> cae de ~4.52e-3 a ~2.75e-3 RMSE, y la ventaja que GARCH le sacaba
+> desaparece casi por completo:
+>
+> | horizonte | RMSE GARCH (antes → ahora) | RMSE naive (antes → ahora) | GARCH vs. naive (antes → ahora) |
+> |---|---|---|---|
+> | 1 | 2.7645e-3 → 2.7724e-3 | 4.5204e-3 → 2.7481e-3 | -38.8% → **+0.9%** |
+> | 3 | 2.7636e-3 → 2.7799e-3 | 4.5216e-3 → 2.7484e-3 | -38.9% → **+1.2%** |
+> | 5 | 2.7642e-3 → 2.7849e-3 | 4.5243e-3 → 2.7487e-3 | -38.9% → **+1.3%** |
+>
+> GARCH pasa de "reduce ~39% el error vs. naive" a "~1% peor que naive" en
+> los tres horizontes — el mismo patrón de empate que ya se veía en
+> dirección. **El resto de la síntesis (dirección no pronosticable) se
+> mantiene sin cambios** — ningún otro modelo cambió de lado del naive tras
+> la corrección (ver `docs/decisions/sept2019_composicion_corrupta.md`,
+> sección "Impacto en Bloque 2", para la comparación completa de los 9
+> modelos). Dos hallazgos secundarios sí mejoraron con datos limpios:
+> XGBoost dejó de sobreajustar tan fuerte (de +61%/+42%/+6% peor que naive a
+> +3.6%/+0.9%/+0.6%) y la predicción inestable de TFT-lite en h=5 se resolvió
+> (de +18.6% peor a +3.5% peor) — ninguno cambia de "empatado/peor que
+> naive" a "mejor que naive", así que no alteran la conclusión de dirección.
+>
+> **Implicancia para la tesis:** ya no hay un modelo ganador positivo en
+> Bloque 2. La lectura honesta ahora es: **nueve métodos de dirección +
+> GARCH de volatilidad, los diez empatados o levemente peores que sus
+> respectivos naive**. Sigue siendo un resultado válido y defendible (ver
+> razones en la sección "Por qué esto es un resultado válido" más abajo,
+> que aplican igual a este resultado ampliado) — simplemente ya no incluye
+> un lado "ganador".
+>
+> **Chequeo de robustez (16 sep 2026) — ya resuelto:** se probó un naive
+> alternativo winsorizado (recorte 1%/99% de `log_return` antes de calcular
+> la varianza) para descartar que la reversión fuera un artefacto de un
+> naive injusto/sensible a outliers. Resultado: el naive winsorizado es
+> **igual o levemente peor** que el crudo (esperable — la varianza muestral
+> cruda ya es, por construcción, el estimador que minimiza MSE), y GARCH
+> sigue perdiendo contra ambos. La reversión de GARCH se sostiene con dos
+> definiciones razonables de naive — no era un artefacto de la métrica de
+> referencia. Ver `docs/decisions/garch_volatility_track_a.md` para la
+> tabla completa. No queda ninguna línea abierta de este lado.
+
 **Fecha:** 15 de septiembre de 2026 (cierre de Track B, Etapa 3)
 **Alcance:** este documento no reporta un experimento nuevo — consolida la
 lectura conjunta de todos los modelos corridos en Bloque 2 (Track A:
