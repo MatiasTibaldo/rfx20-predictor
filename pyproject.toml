@@ -27,6 +27,7 @@ dependencies = [
     "arch>=8.0.0",
     "xgboost>=3.2.0",
     "lightgbm>=4.7.0",
+    "matplotlib>=3.11.1",
 ]
 
 [project.optional-dependencies]

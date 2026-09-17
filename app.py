@@ -22,8 +22,10 @@ from scipy import stats as sp_stats
 import streamlit as st
 from plotly.subplots import make_subplots
 
-from processing.cleaner import apply_composition_price_corrections, apply_corrections
+from evaluation import results_loader
 from ingestion.composition import RFX20CompositionLoader
+from models.ml.common import HORIZONS
+from processing.cleaner import apply_composition_price_corrections, apply_corrections
 from storage.store import DuckDBStore
 
 # ---------------------------------------------------------------------------
@@ -1149,6 +1151,216 @@ def fig_multi_ticker(dfs: dict[str, pl.DataFrame], mode: str) -> go.Figure:
 
 
 # ---------------------------------------------------------------------------
+# Modelos (Bloque 2: Track A + Track B) — carga de datos
+# ---------------------------------------------------------------------------
+
+# Misma paleta que evaluation/figures.py (las figuras estáticas de la tesis)
+# para que la identidad de cada serie/familia sea reconocible entre ambos
+# formatos — ver docs/decisions/track_a_b_sintesis_direccion_volatilidad.md.
+_MODEL_COLOR_REAL = "#2a78d6"
+_MODEL_COLOR_PRED = "#eb6834"
+_MODEL_COLOR_FAMILY = {
+    results_loader.TRACK_A_ESTADISTICO: "#2a78d6",
+    results_loader.TRACK_A_ML: "#eb6834",
+    results_loader.TRACK_B_DL: "#1baf7a",
+}
+_MODEL_COLOR_NAIVE = "#898781"
+
+
+@st.cache_data(ttl=300)
+def load_model_predictions() -> pd.DataFrame:
+    return results_loader.load_all_predictions(HORIZONS).to_pandas()
+
+
+@st.cache_data(ttl=300)
+def load_model_metrics_summary() -> pd.DataFrame:
+    preds = results_loader.load_all_predictions(HORIZONS)
+    return results_loader.compute_metrics_summary(preds).to_pandas()
+
+
+@st.cache_data(ttl=300)
+def load_naive_baseline() -> pd.DataFrame:
+    return results_loader.compute_naive_baseline(HORIZONS).to_pandas()
+
+
+@st.cache_data(ttl=300)
+def load_garch_preds() -> pd.DataFrame:
+    return results_loader.load_garch_predictions(HORIZONS).to_pandas()
+
+
+# ---------------------------------------------------------------------------
+# Modelos — figuras interactivas
+# ---------------------------------------------------------------------------
+
+
+def fig_rmse_comparison(summary: pd.DataFrame, naive: pd.DataFrame, horizon: int) -> go.Figure:
+    """Barras horizontales de RMSE por modelo (coloreadas por familia),
+    ordenadas ascendente, con una línea de referencia del naive."""
+    rows = summary[summary["horizon"] == horizon].sort_values("rmse", ascending=True)
+    naive_rmse = naive.loc[naive["horizon"] == horizon, "naive_rmse"].iloc[0]
+
+    fig = go.Figure()
+    for family, color in _MODEL_COLOR_FAMILY.items():
+        fam_rows = rows[rows["family"] == family]
+        if fam_rows.empty:
+            continue
+        fig.add_trace(
+            go.Bar(
+                x=fam_rows["rmse"],
+                y=fam_rows["label"],
+                orientation="h",
+                name=family,
+                marker_color=color,
+                hovertemplate="%{y}: RMSE %{x:.6f}<extra></extra>",
+            )
+        )
+
+    fig.add_vline(
+        x=naive_rmse,
+        line=dict(color=_MODEL_COLOR_NAIVE, width=1.5),
+        annotation_text="naive",
+        annotation_position="top",
+    )
+    fig.update_layout(
+        title=f"RMSE por modelo — horizonte {horizon} día(s) (val)",
+        xaxis_title="RMSE",
+        height=max(430, 28 * len(rows)),
+        margin=dict(l=0, r=0, t=40, b=60),
+        legend=dict(orientation="h", yanchor="top", y=-0.18, xanchor="center", x=0.5),
+        barmode="overlay",
+    )
+    return fig
+
+
+def fig_predicted_vs_real(preds: pd.DataFrame, model: str, horizon: int) -> go.Figure:
+    """Línea real vs. predicho para un modelo y horizonte puntual (val)."""
+    sub = preds[(preds["model"] == model) & (preds["horizon"] == horizon)].sort_values("date")
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=sub["date"], y=sub["y_true"], mode="lines",
+            line=dict(color=_MODEL_COLOR_REAL, width=1.3), name="Real",
+            hovertemplate="%{x|%Y-%m-%d}: %{y:.4f}<extra>Real</extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=sub["date"], y=sub["y_pred"], mode="lines",
+            line=dict(color=_MODEL_COLOR_PRED, width=1.3), name="Predicho",
+            hovertemplate="%{x|%Y-%m-%d}: %{y:.4f}<extra>Predicho</extra>",
+        )
+    )
+    fig.add_hline(y=0, line=dict(color="#e1e0d9", width=1))
+    fig.update_layout(
+        title=f"Predicho vs. real — horizonte {horizon} día(s) (val)",
+        xaxis_title="Fecha",
+        yaxis_title="log_return_fwd",
+        hovermode="x unified",
+        height=420,
+        margin=dict(l=0, r=0, t=40, b=0),
+    )
+    return fig
+
+
+def fig_garch_volatility(garch: pd.DataFrame, horizon: int) -> go.Figure:
+    """Volatilidad predicha (GARCH) vs. realizada, para un horizonte puntual."""
+    sub = garch[garch["horizon"] == horizon].sort_values("date")
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=sub["date"], y=sub["realized_vol"], mode="lines",
+            line=dict(color=_MODEL_COLOR_REAL, width=1.3), name="Volatilidad realizada",
+            hovertemplate="%{x|%Y-%m-%d}: %{y:.4f}<extra>Realizada</extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=sub["date"], y=sub["predicted_vol"], mode="lines",
+            line=dict(color=_MODEL_COLOR_PRED, width=1.6), name="Volatilidad predicha (GARCH)",
+            hovertemplate="%{x|%Y-%m-%d}: %{y:.4f}<extra>GARCH</extra>",
+        )
+    )
+    fig.update_layout(
+        title=f"GARCH(1,1) t-Student — horizonte {horizon} día(s) (val)",
+        xaxis_title="Fecha",
+        yaxis_title="Volatilidad (desvío del retorno)",
+        hovermode="x unified",
+        height=420,
+        margin=dict(l=0, r=0, t=40, b=0),
+    )
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Modelos — sección completa
+# ---------------------------------------------------------------------------
+
+
+def render_modelos_section() -> None:
+    """Resultados de Bloque 2 (Track A + Track B) — ver
+    docs/decisions/track_a_b_sintesis_direccion_volatilidad.md para la
+    lectura completa. Complementa las figuras estáticas de
+    evaluation/figures.py (docs/figures/): acá se puede filtrar por
+    modelo/horizonte de forma interactiva."""
+    preds = load_model_predictions()
+    summary = load_model_metrics_summary()
+    naive = load_naive_baseline()
+    garch = load_garch_preds()
+
+    if preds.empty:
+        st.warning(
+            "No se encontraron predicciones en `results/`. Corré los runners de "
+            "Track A / Track B antes de ver esta sección."
+        )
+        return
+
+    tab_resumen, tab_detalle, tab_garch = st.tabs(
+        ["Resumen (todos los modelos)", "Predicho vs. real (por modelo)", "GARCH — Volatilidad"]
+    )
+
+    with tab_resumen:
+        horizon = st.selectbox("Horizonte", HORIZONS, key="resumen_horizon")
+        st.plotly_chart(fig_rmse_comparison(summary, naive, horizon), use_container_width=True)
+        st.caption(
+            "La dirección del retorno diario no es pronosticable con los datos "
+            "disponibles: nueve métodos independientes empatan (o empeoran) frente "
+            "al naive. GARCH es la excepción — predice volatilidad, no dirección "
+            "(pestaña 'GARCH — Volatilidad')."
+        )
+        st.dataframe(
+            summary[summary["horizon"] == horizon][["label", "family", "feature_set", "rmse", "mae", "n"]]
+            .sort_values("rmse")
+            .rename(columns={"label": "Modelo", "family": "Familia", "feature_set": "Features"}),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    with tab_detalle:
+        col1, col2 = st.columns(2)
+        with col1:
+            model_options = preds[["model", "label"]].drop_duplicates().sort_values("label")
+            model_label = st.selectbox("Modelo", model_options["label"].tolist(), key="detalle_model")
+            model = model_options.loc[model_options["label"] == model_label, "model"].iloc[0]
+        with col2:
+            horizon_d = st.selectbox("Horizonte", HORIZONS, key="detalle_horizon")
+        st.plotly_chart(fig_predicted_vs_real(preds, model, horizon_d), use_container_width=True)
+
+    with tab_garch:
+        if garch.empty:
+            st.warning("No se encontraron predicciones de GARCH en `results/track_a/`.")
+        else:
+            horizon_g = st.selectbox("Horizonte", HORIZONS, key="garch_horizon")
+            st.plotly_chart(fig_garch_volatility(garch, horizon_g), use_container_width=True)
+            st.caption(
+                "GARCH(1,1) con innovaciones t-Student reduce ~39-40% el RMSE de "
+                "varianza condicional frente al naive (varianza constante) — el único "
+                "hallazgo positivo de Bloque 2."
+            )
+
+
+# ---------------------------------------------------------------------------
 # Sidebar summary
 # ---------------------------------------------------------------------------
 
@@ -1854,7 +2066,7 @@ def main() -> None:
 
     section = st.sidebar.radio(
         "Sección",
-        ["Pipeline", "Validación de datos"],
+        ["Pipeline", "Validación de datos", "Modelos"],
         label_visibility="collapsed",
     )
 
@@ -1862,6 +2074,8 @@ def main() -> None:
 
     if section == "Pipeline":
         render_pipeline_section()
+    elif section == "Modelos":
+        render_modelos_section()
     else:
         tab_rfx20, tab_ohlcv, tab_proc = st.tabs(
             ["Índice RFX20", "Series OHLCV", "Procesamiento"]

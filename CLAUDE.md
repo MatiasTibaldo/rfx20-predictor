@@ -122,6 +122,90 @@ Contexto de trabajo para Claude Code. Leer antes de generar cualquier código.
   retorno diario no es pronosticable con este feature set — motiva Track B (Deep Learning)
   y refuerza que GARCH (volatilidad) es el hallazgo positivo de Bloque 2 hasta ahora.
 
+### Track B (Deep Learning) — completo
+
+- **Track B, Etapa 1 (completa, 15 sep 2026):** LSTM baseline sobre un
+  feature set deliberadamente acotado (`log_return` +
+  `realized_vol_10/20/50`, sin macro ni indicadores técnicos —
+  `models/deep_learning/common.py`, `models/deep_learning/lstm.py`,
+  `models/deep_learning/lstm_runner.py`). Un modelo por horizonte (1, 3,
+  5 días, igual que Track A), lookback elegido por grid search `{10, 20,
+  30}` contra una porción de early-stopping tallada del final
+  cronológico de train — `val` nunca se usa para seleccionar
+  hiperparámetros, solo para la evaluación final (comparabilidad directa
+  con Track A). Resultado: LSTM queda prácticamente empatado con el
+  naive en los tres horizontes (levemente peor, dentro del ruido) —
+  **séptima confirmación independiente** de que la dirección del retorno
+  diario no es pronosticable con la información disponible, ahora con
+  una arquitectura que sí modela dependencia secuencial explícita. Ver
+  `docs/decisions/lstm_baseline_track_b.md`. Dependencia agregada:
+  `torch` CPU (`uv sync --extra cpu`, extra ya declarado en
+  `pyproject.toml` desde el inicio del proyecto). Predicciones en
+  `results/track_b/lstm_val_predictions_h{1,3,5}.parquet`, MLflow
+  experimento `rfx20-track-b`.
+
+- **Track B, Etapa 2 (completa, 15 sep 2026):** GRU con el mismo protocolo
+  que el LSTM de Etapa 1 (`models/deep_learning/gru.py`,
+  `gru_runner.py`), y exploración del feature set completo de Track A ML
+  (24 predictores, mismo tratamiento que SVM — ratios de precio, gaps
+  estructurales excluidos en vez de imputados) en ambas arquitecturas.
+  `models/deep_learning/common.py` generalizado (`prepare_frame`) para
+  soportar `feature_set="narrow"|"full"` sin duplicar código. Resultado:
+  GRU queda prácticamente idéntico al LSTM con el feature set acotado
+  (ninguna arquitectura mejora sobre el naive); sumar el feature set
+  completo **empeora sustancialmente** en ambas arquitecturas (RMSE
+  2-2.5x el naive) por sobreajuste — no es un empate como en Etapa 1,
+  es una degradación clara, mismo patrón que XGBoost en Track A. Ver
+  `docs/decisions/track_b_etapa2_gru_full_features.md`. Predicciones en
+  `results/track_b/{lstm,gru}_val_predictions_h{1,3,5}[_full].parquet`.
+
+- **Track B, Etapa 3 (completa, 15 sep 2026) — cierra Track B:** híbrido
+  CNN-LSTM (`models/deep_learning/cnn_lstm.py` + `cnn_lstm_runner.py`) y
+  "TFT-lite" (`tft_lite.py` + `tft_lite_runner.py` — evaluación preliminar
+  basada en atención, explícitamente **no** una implementación completa
+  de Temporal Fusion Transformer; ver justificación de alcance en el
+  propio documento de decisión), ambos sobre el feature set acotado.
+  Mismo resultado que LSTM/GRU: empatados con el naive en los tres
+  horizontes (TFT-lite muestra una única predicción inestable en h=5 que
+  infla el RMSE sin ser un sesgo sistemático — ver detalle). Ver
+  `docs/decisions/track_b_etapa3_tft_hibrido.md`. Predicciones en
+  `results/track_b/{cnn_lstm,tft_lite}_val_predictions_h{1,3,5}.parquet`.
+
+**Síntesis de Bloque 2 (Track A + Track B), completa:** nueve métodos
+independientes (ARIMA/SARIMA, SVM, RF, XGBoost, LightGBM, LSTM, GRU,
+CNN-LSTM, TFT-lite) coinciden en que la **dirección** del retorno diario
+del RFX20 no es pronosticable con los datos disponibles; GARCH sigue
+siendo el único hallazgo positivo, para **volatilidad**. Ver
+`docs/decisions/track_a_b_sintesis_direccion_volatilidad.md` para la
+lectura completa (por qué es un resultado válido para la tesis, qué
+implica para Bloque 3).
+
+### Visualización de resultados (15 sep 2026)
+
+Cobertura completa (todos los modelos y horizontes de Bloque 2) en dos
+formatos, ambos alimentados por el mismo loader (`evaluation/results_loader.py`
+— evita duplicar "qué archivos existen y cómo se leen" en dos lugares):
+
+- **Estáticas (PNG, para la tesis):** `evaluation/figures.py`
+  (`uv run python -m evaluation.figures`) genera `docs/figures/`:
+  `rmse_comparison.png` (barras por familia vs. naive, un panel por
+  horizonte), `predicted_vs_real_h{1,3,5}.png` (grilla con todos los
+  modelos de retorno) y `garch_volatility.png`. Paleta: azul=Real/Track A
+  Estadístico, naranja=Predicho/Track A ML clásico, aqua=Track B Deep
+  Learning — misma paleta en ambos formatos para que la identidad de cada
+  serie sea reconocible.
+- **Interactivas:** nueva sección "Modelos" en `app.py` (Streamlit),
+  con pestañas Resumen / Predicho vs. real (selector de modelo+horizonte)
+  / GARCH — Volatilidad.
+- **Prerequisito resuelto en el camino:** SVM/RF/XGBoost/LightGBM no
+  guardaban sus predicciones de val (solo importancias) — se agregó
+  `dates` a `models/ml/common.py::split_arrays` y cada runner ahora
+  persiste `{model}_val_predictions_h{h}.parquet`, igual que Track A
+  estadístico y Track B. Se re-corrieron los 4 y los RMSE/MAE coinciden
+  con lo ya documentado (RF difiere en el 4º-5º decimal en h=5 por el
+  no-determinismo de punto flotante conocido de `RandomForestRegressor`
+  con `n_jobs=-1` — no cambia ninguna conclusión).
+
 ### Corrección de datos (16 sep 2026): composición RFX20 corrupta en sep-2019
 
 Explorando variables objetivo alternativas para Bloque 3 se encontraron y
@@ -267,7 +351,8 @@ rfx20-predictor/
 │   ├── statistical/           # ARIMA, GARCH — pendiente (Bloque 2)
 │   ├── ml/                    # XGBoost, LightGBM, RF, SVM — pendiente
 │   └── deep_learning/         # LSTM, GRU, híbridos — pendiente (extra [cpu]/[colab])
-├── evaluation/                # Métricas y backtesting — pendiente
+├── evaluation/                # results_loader.py + figures.py (visualización) — completo;
+│                               #   framework de comparación multicriterio de Bloque 3, pendiente
 │
 ├── data/
 │   ├── raw/                   # Datos crudos, TRACKEADOS en git (irreproducibles)

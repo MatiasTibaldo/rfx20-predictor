@@ -56,8 +56,8 @@ def main(
     for h in horizons:
         logger.info(f"[lightgbm_runner] Horizonte {h}: construyendo feature matrix...")
         model_frame = build_model_frame(df, horizon=h, exclude_structural_gaps=False)
-        X_train, y_train, feature_names = split_arrays(model_frame, "train")
-        X_val, y_val, _ = split_arrays(model_frame, "val")
+        X_train, y_train, feature_names, _ = split_arrays(model_frame, "train")
+        X_val, y_val, _, dates_val = split_arrays(model_frame, "val")
         logger.info(
             f"[lightgbm_runner] h={h}: train={len(y_train)} filas, val={len(y_val)} filas, "
             f"{len(feature_names)} features"
@@ -88,6 +88,12 @@ def main(
             orient="row",
         ).write_parquet(importances_path)
 
+        predictions_path = results_dir / f"lightgbm_val_predictions_h{h}.parquet"
+        y_pred_val = result.best_estimator.predict(X_val)
+        pl.DataFrame({"date": dates_val, "y_true": y_val, "y_pred": y_pred_val}).write_parquet(
+            predictions_path
+        )
+
         with mlflow.start_run(run_name=f"lightgbm_h{h}"):
             mlflow.log_params({**result.best_params, "horizon": h, "random_state": RANDOM_STATE})
             mlflow.log_metric("cv_best_score_neg_rmse", result.cv_best_score)
@@ -96,6 +102,7 @@ def main(
             mlflow.log_metric("naive_rmse", naive_rmse)
             mlflow.log_metric("naive_mae", naive_mae)
             mlflow.log_artifact(str(importances_path))
+            mlflow.log_artifact(str(predictions_path))
 
         summary_rows.append(
             {

@@ -1,15 +1,15 @@
 """
-evaluation — Model evaluation and comparison.
+evaluation — Model evaluation, comparison, and visualization.
 
-Computes performance metrics on the hold-out test set and persists results
-via DuckDBStore so that runs across different models and horizons can be
-compared in a reproducible way.
+``results_loader.py`` unifies every Bloque 2 (Track A + Track B) model's
+val predictions into one long-format schema, regardless of how each
+family happened to persist them. ``figures.py`` renders that into
+thesis-ready static PNGs (``docs/figures/``); the same loader backs the
+"Modelos" section of the Streamlit dashboard (``app.py``) for interactive
+exploration. See docs/decisions/track_a_b_sintesis_direccion_volatilidad.md
+for what these results mean.
 
-Metrics of interest:
-- Regression : RMSE, MAE, MAPE, directional accuracy
-- Trading    : Sharpe ratio (simulated), max drawdown of a naive strategy
-               that follows model signals
-
-Results are also saved as Parquet snapshots in ``results/`` for downstream
-visualisation in notebooks.
+Bloque 3 (comparación multicriterio: RMSE/MAE/MAPE, hit ratio,
+backtesting con Sharpe/drawdown, ensamble) todavía no arrancó — este
+paquete crecerá con esa lógica cuando lo haga.
 """

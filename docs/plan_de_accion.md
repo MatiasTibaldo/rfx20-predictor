@@ -176,9 +176,37 @@ RFX20, BADLAR/TAMAR.
     magnitud del movimiento sí resulta pronosticable. Ver
     `docs/decisions/garch_volatility_track_a.md`. Código: `models/statistical/garch.py`,
     `models/statistical/garch_runner.py`. Dependencia agregada: `arch` (`uv add arch`).
-- **Track B (Deep Learning) — sin arrancar todavía:** ventanas/lookback → LSTM y GRU →
-  evaluación preliminar de TFT/Transformer → híbrido CNN-LSTM. Entrenamientos largos
-  corren de fondo (overnight) sin bloquear el resto del trabajo.
+- **Track B (Deep Learning) — completo (15 sep 2026):** ventanas/lookback → LSTM y GRU →
+  evaluación preliminar de TFT/Transformer → híbrido CNN-LSTM.
+  - **Etapa 1 — LSTM baseline (completa, 15 sep 2026):** feature set acotado
+    (`log_return` + volatilidad realizada, sin macro/técnicos), un modelo por
+    horizonte, lookback elegido por grid search contra una porción de
+    early-stopping (nunca contra val). Resultado: empatado con el naive en
+    los 3 horizontes — séptima confirmación de que la dirección del retorno
+    no es pronosticable, ahora con una arquitectura secuencial. Ver
+    `docs/decisions/lstm_baseline_track_b.md`. Código:
+    `models/deep_learning/common.py`, `lstm.py`, `lstm_runner.py`.
+    Dependencia agregada: `torch` CPU (`uv sync --extra cpu`).
+  - **Etapa 2 — GRU + feature set completo (completa, 15 sep 2026):** mismo
+    protocolo que Etapa 1 aplicado a GRU (empatado con LSTM/naive) +
+    exploración del feature set completo de Track A ML en ambas
+    arquitecturas (empeora sustancialmente por sobreajuste, no solo
+    empate — mismo patrón que XGBoost). Ver
+    `docs/decisions/track_b_etapa2_gru_full_features.md`. Código:
+    `models/deep_learning/gru.py`, `gru_runner.py`, `common.py`
+    generalizado (`prepare_frame`).
+  - **Etapa 3 — CNN-LSTM + "TFT-lite", cierra Track B (completa, 15 sep 2026):**
+    híbrido convolucional-recurrente y una evaluación preliminar basada en
+    atención (explícitamente no un TFT completo — variable selection
+    networks, gating y covariables estáticas no aplican a este dataset de
+    una sola serie). Mismo resultado: empatados con el naive. Ver
+    `docs/decisions/track_b_etapa3_tft_hibrido.md`. Código:
+    `models/deep_learning/cnn_lstm.py`, `tft_lite.py`, sus runners.
+
+**Síntesis de Bloque 2 completa:** nueve métodos independientes (Track A +
+Track B) coinciden en que la dirección del retorno diario no es
+pronosticable; GARCH es el único hallazgo positivo, para volatilidad. Ver
+`docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`.
 
 **Extensión a horizontes largos (10/21 días hábiles) — evaluada y descartada (8 sep
 2026):** se probó sobre un dataset aparte (`features_long_ext.parquet`, sin fusionar
@@ -199,6 +227,14 @@ antes hardcodeadas). Ver `docs/decisions/long_horizons_track_a.md`.
   Sharpe/drawdown, robustez por régimen de volatilidad)
 - Ensemble (promedio/ponderado/stacking)
 - Selección del modelo óptimo + feature importance final
+
+**Adelanto (15 sep 2026):** visualización de los resultados de Bloque 2 ya
+completa, antes de tiempo — `evaluation/results_loader.py` + `evaluation/figures.py`
+(PNG para la tesis en `docs/figures/`) y una sección "Modelos" nueva en el
+dashboard de Streamlit (`app.py`), ambos con cobertura completa de los 11
+modelos × 3 horizontes ya corridos. Reutilizable para Bloque 3: el mismo
+loader puede alimentar el framework de comparación multicriterio cuando
+arranque.
 
 ### Bloque 4 — Cierre (13 nov – 28 nov)
 

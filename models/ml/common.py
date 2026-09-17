@@ -126,8 +126,8 @@ def build_model_frame(
 
 def split_arrays(
     model_frame: pl.DataFrame, split: str
-) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    """Extract (X, y, feature_names) for one split ('train' or 'val').
+) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray]:
+    """Extract (X, y, feature_names, dates) for one split ('train' or 'val').
 
     Rows with any null predictor are dropped, EXCEPT for the
     structurally-gapped columns (futures/TAMAR/MEP-spreads — see
@@ -135,6 +135,10 @@ def split_arrays(
     handle them natively. The remaining nulls dropped here are just
     technical-indicator warm-up at the start of train (~50 rows — see
     docs/decisions/technical_indicators_scope.md).
+
+    ``dates`` lines up row-for-row with X/y — added so runners can persist
+    (date, y_true, y_pred) predictions parquets for visualization, the same
+    convention already used by the statistical and deep learning runners.
     """
     subset = model_frame.filter(pl.col("split") == split)
     feature_names = [c for c in subset.columns if c not in ("date", "split", "target")]
@@ -145,7 +149,8 @@ def split_arrays(
 
     X = subset.select(feature_names).to_numpy()
     y = subset["target"].to_numpy()
-    return X, y, feature_names
+    dates = subset["date"].to_numpy()
+    return X, y, feature_names, dates
 
 
 @dataclass(frozen=True)
