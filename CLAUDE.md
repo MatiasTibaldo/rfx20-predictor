@@ -261,6 +261,26 @@ sostiene, no era un artefacto de la métrica de referencia. No queda
 ninguna línea abierta de este lado; Bloque 2 se da por cerrado con
 resultado negativo en las dos dimensiones (dirección y volatilidad).
 
+### Desvíos crónicos composición-vs-OHLCV (BYMA/YPFD/MIRG) + bug de doble ajuste (16 sep 2026)
+
+Se encontró un tercer ticker (MIRG, además de BYMA/YPFD) con el mismo
+patrón: OHLCV canónico retroajustado retroactivamente por un split futuro
+mientras `rfx20_composition.parquet` conserva el precio "de la foto". Al
+agregar las entradas de MIRG/YPFD se detectó un **bug real y anterior a
+esta sesión**: `processing/pipeline.py` (Nodo 3) aplicaba el ajuste hacia
+atrás de `SplitAdjuster` también a BYMA, duplicándolo sobre un OHLCV que
+ya venía ajustado — `data/processed/v1/ohlcv_long.parquet` tenía a BYMA
+dividido por 50 de más en fechas pre-2022. **Sin impacto en Bloque 2**
+(`features_long.parquet` no usa OHLCV por componente, verificado
+explícitamente — mismo `log_return` antes/después del fix). Corregido:
+nueva sección `composition_only_splits:` en `config/data_corrections.yaml`
+para BYMA/YPFD/MIRG (no la consume `SplitAdjuster`), `splits:` se queda
+solo con tickers cuyo OHLCV crudo es genuinamente nominal (COME/AGRO/MORI).
+Nodo 3 y Nodo 4 re-corridos. Ver
+`docs/decisions/doble_ajuste_splits_cronicos.md` y
+`docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md`. Sigue pendiente
+el reescalado genérico de composición para `app.py::fig_weight_history`.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido

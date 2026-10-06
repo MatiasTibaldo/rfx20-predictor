@@ -1,5 +1,20 @@
 # Decisión: Split YPFD 10:1 (agosto 2026) — no requiere ajuste
 
+> **Actualización (16 sep 2026):** esta decisión respondía una pregunta
+> puntual — ¿la *transición* del split genera una discontinuidad artificial
+> en la reconstrucción del índice? No, y esa verificación sigue siendo
+> válida. Pero es una pregunta distinta de la que surgió después: ¿el
+> `close` de composición coincide con el OHLCV canónico para fechas
+> *lejanas* a la transición? No — divergen por un factor ≈10 constante en
+> las 1.964 filas anteriores al split (mismo mecanismo ya confirmado para
+> BYMA y MIRG: el feed OHLCV retroajusta retroactivamente toda la serie
+> histórica, la composición congelada no). Se agregó una entrada para
+> YPFD en `config/data_corrections.yaml::splits` para que reciba el mismo
+> tratamiento genérico que BYMA/MIRG en cualquier consumidor que compare
+> ambas fuentes (p. ej. `app.py::fig_weight_history`). Ver
+> `docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md` para el
+> análisis consolidado de los tres tickers.
+
 **Fecha:** agosto 2026
 **Módulos afectados:** ninguno (verificación, sin cambios de código)
 **Archivo de configuración:** `config/data_corrections.yaml` (sin nueva entrada)

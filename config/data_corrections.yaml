@@ -52,6 +52,22 @@ splits:
     verified: true
     notes: "Desdoblamiento 7.0947:1. Salió del índice el 2020-12-30, anterior al split."
 
+# Splits de tickers cuyo OHLCV crudo YA viene retroajustado por el feed en
+# vivo (Matriz) — a diferencia de los de `splits:` arriba (COME/AGRO/MORI),
+# cuyo OHLCV crudo es nominal y sí necesita el ajuste hacia atrás de
+# SplitAdjuster. Mezclar ambos tipos en `splits:` causó un bug real: Nodo 3
+# (`processing/pipeline.py::adjust_all`) aplicaba el ajuste hacia atrás
+# también a BYMA, duplicándolo sobre un OHLCV que ya estaba ajustado
+# (detectado 16 sep 2026 — `data/processed/v1/ohlcv_long.parquet` tenía a
+# BYMA dividido por 50 de más en fechas pre-2022). Ver
+# docs/decisions/doble_ajuste_splits_cronicos.md.
+#
+# Estas entradas NO se consumen vía `SplitAdjuster.adjust_series`/`adjust_all`
+# (Nodo 3) — son para reescalar `close` de `rfx20_composition.parquet` al
+# compararlo contra OHLCV (ver docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md
+# para el hallazgo original y el consumidor pendiente, p. ej.
+# `app.py::fig_weight_history`). Mismo formato que `splits:`.
+composition_only_splits:
   - ticker: BYMA
     date: "2022-07-06"
     ratio: 10.0
@@ -99,6 +115,49 @@ splits:
       2025-05-26 (salto exacto en el borde del fin de semana). Cumulativo con
       los splits 2022 (10:1) y 2024 (5:1): factor total 100x antes de
       2022-07-06, consistente con lo observado.
+
+  - ticker: MIRG
+    date: "2026-08-03"
+    ratio: 10.0
+    source: "Historial de splits MIRG provisto por el alumno"
+    in_index: false
+    verified: true
+    notes: >
+      Desdoblamiento 10:1. Encontrado (16 sep 2026) al barrer todos los
+      tickers buscando el mismo patrón crónico composición-vs-OHLCV que
+      YPFD/BYMA (ver docs/decisions/sept2019_composicion_corrupta.md,
+      pendiente #3): ratio constante =10 en las 972 filas donde MIRG
+      aparece en `rfx20_composition.parquet` (2020-01-02 → 2023-12-29,
+      única ventana en que integró el RFX20). El split afecta
+      retroactivamente toda la serie OHLCV 2018-2026 (sin salto visible
+      alrededor del 2026-08-03, mismo mecanismo de feed en vivo
+      retroajustado que YPFD/BYMA) — el desvío solo es observable en la
+      ventana de composición disponible, no en todo el rango afectado.
+      `in_index: false` porque MIRG ya había salido del índice (dic-2023)
+      para cuando ocurrió el split (ago-2026).
+
+  - ticker: YPFD
+    date: "2026-08-03"
+    ratio: 10.0
+    source: "docs/decisions/ypfd_split_2026.md"
+    in_index: true
+    verified: true
+    notes: >
+      Desdoblamiento 10:1, mismo evento y fecha que MIRG (coincidencia
+      verificada, no error — ver notas de MIRG arriba). Documentado en
+      `docs/decisions/ypfd_split_2026.md`, que en su momento (ago-2026)
+      concluyó que no hacía falta entrada acá porque precio y
+      `cantidades_vigentes` de composición venían sincronizados en la
+      fuente. Esa conclusión quedó parcialmente obsoleta (16 sep 2026):
+      sigue siendo cierto que la *transición* del split no generó un
+      salto espurio (igual que se verificó entonces), pero el `close` de
+      composición para *cualquier fecha anterior* al split sigue siendo
+      nominal (no ajustado) mientras que el OHLCV ya viene retroajustado
+      — ratio ≈10 constante en las 1.964 filas pre-split de
+      `rfx20_composition.parquet`. Se agrega la entrada para que YPFD
+      reciba el mismo tratamiento genérico que BYMA/MIRG en cualquier
+      consumidor que compare composición contra OHLCV. Ver
+      `docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md`.
 
 # Eventos macroeconómicos identificados como falsos positivos en validate_variation.py
 # NO son splits — son movimientos reales del mercado que se documentan para

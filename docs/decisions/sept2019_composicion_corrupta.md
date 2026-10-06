@@ -96,6 +96,13 @@ cantidad.
 
 ### 5. Nota aparte: desvíos crónicos de BYMA e YPFD (no son parte de este bug)
 
+> Este hallazgo se extendió y se consolidó por separado en
+> `docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md` (16 sep 2026):
+> se sumó un tercer ticker (MIRG, mismo patrón), se identificó el impacto
+> concreto en `app.py::fig_weight_history`, y se agregaron entradas de
+> split para los tres en `config/data_corrections.yaml`. Esta sección se
+> deja sin editar como registro de cómo se descubrió originalmente.
+
 Al barrer toda la historia también aparecen BYMA (1.677 días) e YPFD (1.964
 días, casi toda la serie) con desvío constante composición-vs-OHLCV. Mecanismo
 distinto: el OHLCV canónico viene de un feed en vivo (Matriz) que reajusta
@@ -238,9 +245,11 @@ la conclusión central del proyecto (ya no hay un "lado ganador").
    de toda la serie 2018-2026 — no se auditó ese alcance todavía.
 2. ~~Tercer split de BYMA no documentado~~ — **resuelto (16 sep 2026)**:
    2:1 el 2025-05-25, confirmado por el alumno y agregado a `data_corrections.yaml`.
-3. **MIRG**: 970 días (~mitad de la historia) con desvío composición-vs-OHLCV
-   no investigado — candidato a tener un split propio no documentado, mismo
-   mecanismo que YPFD/BYMA.
+3. ~~MIRG: desvío composición-vs-OHLCV no investigado~~ — **resuelto (16 sep
+   2026)**: split 10:1 el 2026-08-03 (mismo día que YPFD, confirmado por el
+   alumno), ratio constante =10 en las 972 filas donde MIRG integró el
+   índice (2020-01-02 → 2023-12-29). Agregado a `data_corrections.yaml`. Ver
+   `docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md`.
 4. **Cluster menor 2024-05-13 → 2024-05-17** (5-8%, pocos tickers: CRES,
    TECO2, LOMA, BBAR, GGAL, TGSU2, CEPU, TGNO4, AGRO): coincide con la fecha
    del split BYMA 2024-05-10, probablemente ruido de timing del snapshot de
