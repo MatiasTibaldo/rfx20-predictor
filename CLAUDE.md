@@ -298,6 +298,23 @@ anteriores quedan con nota de redirección, no se borraron). Pendientes
 menores: PAMP ("4 splits" sin fecha/ratio verificable) y la fusión
 VALO→GFV (no es un split, sin impacto todavía — monitorear).
 
+### BYMA, nov-2022: error intermedio corregido directamente en raw (16 sep 2026)
+
+Analizando el ratio composición/OHLCV de BYMA contra el **régimen
+esperado** por fecha (no contra el OHLCV crudo directo, que no distingue
+el mismatch crónico ya conocido de uno nuevo) se encontró un desvío
+aislado de 4 ruedas (2022-11-22 → 25): ratio cae de 10 a 2 sin ningún
+split asociado. A diferencia de sep-2019 (donde el API de MatbaRofex
+reproducía el mismo dato corrupto), acá el API tiene el valor correcto —
+confirmado en las 4 fechas y en dos fechas de control inmediatamente
+antes/después. Es un error de transcripción puntual de nuestra copia
+local, no del dato de origen. El alumno autorizó explícitamente editar
+los 4 `cartera_historica_2022112{2,3,4,5}.csv` con el valor del API —
+**única excepción a la inmutabilidad de `data/raw/` en todo el
+proyecto**, no es precedente general. `rfx20_composition.parquet`
+regenerado (`ingestion.composition_runner`). Ver
+`docs/decisions/byma_nov2022_error_intermedio.md`.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido
