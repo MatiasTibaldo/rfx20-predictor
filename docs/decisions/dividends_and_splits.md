@@ -1,5 +1,11 @@
 # Decisión: Tratamiento de dividendos y splits en el índice RFX20
 
+> **Actualización (16 sep 2026):** para el estado actual de qué ticker
+> tiene qué split y si está ajustado en origen o no, consultar
+> `docs/decisions/registro_splits_componentes.md` — tabla única y
+> consolidada de los 28 componentes. Este documento queda como registro
+> histórico de la clasificación de eventos en `base.dividendos2.csv`.
+
 **Fecha:** junio 2026  
 **Fuente:** Consulta directa con el equipo que mantiene el índice en Primary S.A.  
 **Módulos afectados:** `processing/adjustments.py`, `config/data_corrections.yaml`

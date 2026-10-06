@@ -1,11 +1,11 @@
 # Decisión: Split YPFD 10:1 (agosto 2026) — no requiere ajuste
 
 > **Actualización (16 sep 2026):** esta decisión respondía una pregunta
-> puntual — ¿la *transición* del split genera una discontinuidad artificial
+> puntual — ¿la _transición_ del split genera una discontinuidad artificial
 > en la reconstrucción del índice? No, y esa verificación sigue siendo
 > válida. Pero es una pregunta distinta de la que surgió después: ¿el
 > `close` de composición coincide con el OHLCV canónico para fechas
-> *lejanas* a la transición? No — divergen por un factor ≈10 constante en
+> _lejanas_ a la transición? No — divergen por un factor ≈10 constante en
 > las 1.964 filas anteriores al split (mismo mecanismo ya confirmado para
 > BYMA y MIRG: el feed OHLCV retroajusta retroactivamente toda la serie
 > histórica, la composición congelada no). Se agregó una entrada para
@@ -42,10 +42,10 @@ previamente para dividendos (TGSU2, ver `splits_adjustment.md`).
 Inspección de `data/raw/rfx20_composition/Cartera Historica/` alrededor
 de la fecha del split:
 
-| Fecha | cantidades_vigentes | close |
-|---|---|---|
-| 2026-07-31 | 1.250995 | 82.900,0 |
-| 2026-08-03 | 12.51632 | 8.105,0 |
+| Fecha      | cantidades_vigentes | close    |
+| ---------- | ------------------- | -------- |
+| 2026-07-31 | 1.250995            | 82.900,0 |
+| 2026-08-03 | 12.51632            | 8.105,0  |
 
 `cantidades_vigentes` sube ×10.006 el mismo día hábil en que el precio
 cae ÷~10.2 — consistente con el split 10:1, y ambos ajustes ocurren el

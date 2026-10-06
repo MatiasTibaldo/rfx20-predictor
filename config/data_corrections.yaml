@@ -52,6 +52,20 @@ splits:
     verified: true
     notes: "Desdoblamiento 7.0947:1. Salió del índice el 2020-12-30, anterior al split."
 
+  - ticker: ECOG
+    date: "2025-08-19"
+    ratio: 10.0
+    source: "investing.com (tabla de splits dedicada) — ver docs/decisions/registro_splits_componentes.md"
+    in_index: false
+    verified: true
+    notes: >
+      Desdoblamiento 10:1. Confirmado como salto real en el OHLCV crudo
+      (25.025,0 -> 2.475,0 el 2025-08-18/19, ratio exacto 0,0989 ≈ 1/10,11).
+      `in_index: false`: ECOG integró el RFX20 recién el 2026-05-04,
+      posterior al split. Encontrado (16 sep 2026) en el barrido externo de
+      las 22 componentes sin clasificar — ver
+      docs/decisions/registro_splits_componentes.md.
+
 # Splits de tickers cuyo OHLCV crudo YA viene retroajustado por el feed en
 # vivo (Matriz) — a diferencia de los de `splits:` arriba (COME/AGRO/MORI),
 # cuyo OHLCV crudo es nominal y sí necesita el ajuste hacia atrás de

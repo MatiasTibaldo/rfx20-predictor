@@ -1,5 +1,12 @@
 # Decisión: Ajuste de series OHLCV por splits
 
+> **Actualización (16 sep 2026):** para el estado actual de qué ticker
+> tiene qué split y si está ajustado en origen o no, consultar
+> `docs/decisions/registro_splits_componentes.md` — tabla única y
+> consolidada de los 28 componentes. Este documento queda como registro
+> histórico del mecanismo de ajuste (`SplitAdjuster`) y de los primeros
+> splits encontrados (COME/AGRO/MORI).
+
 **Fecha:** junio 2026  
 **Módulos afectados:** `ingestion/`, `processing/adjustments.py`  
 **Archivo de configuración:** `config/data_corrections.yaml`

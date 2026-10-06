@@ -3,8 +3,13 @@
 **Fecha:** 16 de septiembre de 2026
 **Origen:** encontrado al investigar `docs/decisions/sept2019_composicion_corrupta.md`
 (sección 5), extendido y consolidado acá. Suma formalmente el split de
-MIRG y YPFD a `config/data_corrections.yaml::splits`, y documenta un
-impacto concreto no corregido en `app.py`.
+MIRG y YPFD a `config/data_corrections.yaml::composition_only_splits`, y
+documenta un impacto concreto no corregido en `app.py`.
+
+> Para el estado actual de **todos** los componentes (no solo estos tres),
+> ver la tabla única en `docs/decisions/registro_splits_componentes.md`.
+> Este documento se enfoca en el mecanismo y el impacto de YPFD/BYMA/MIRG
+> específicamente.
 
 ## El mecanismo
 

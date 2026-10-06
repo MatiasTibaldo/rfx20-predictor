@@ -281,6 +281,23 @@ Nodo 3 y Nodo 4 re-corridos. Ver
 `docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md`. Sigue pendiente
 el reescalado genérico de composición para `app.py::fig_weight_history`.
 
+**Barrido externo de splits, las 22 componentes sin clasificar (16 sep
+2026).** Investigación vía web (investing.com, digrin.com, etc.) del
+historial de splits de los 22 tickers restantes, motivada por la
+preocupación de que un split chico (ej. 1.33:1) no deja un salto visible
+en la serie y podría pasar desapercibido. Resultado: un split real nuevo,
+**ECOG (10:1, 2025-08-19)**, agregado a `splits:` (salto confirmado en el
+OHLCV crudo). Cinco candidatos de ratio chico (BMA, CRES, TGSU2, IRSA,
+SUPV) resultaron ser **falsos positivos** de los detectores automáticos de
+digrin.com/Alpha Spread — al cruzarlos contra el OHLCV crudo en una
+ventana de ±4 días, son tendencia normal de mercado, no un escalón
+aislado. Nodo 3 y Nodo 4 re-corridos con ECOG incluido. Toda la
+documentación de splits por ticker quedó consolidada en una tabla única,
+`docs/decisions/registro_splits_componentes.md` (los docs individuales
+anteriores quedan con nota de redirección, no se borraron). Pendientes
+menores: PAMP ("4 splits" sin fecha/ratio verificable) y la fusión
+VALO→GFV (no es un split, sin impacto todavía — monitorear).
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido
