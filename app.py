@@ -1183,11 +1183,6 @@ def load_naive_baseline() -> pd.DataFrame:
     return results_loader.compute_naive_baseline(HORIZONS).to_pandas()
 
 
-@st.cache_data(ttl=300)
-def load_garch_preds() -> pd.DataFrame:
-    return results_loader.load_garch_predictions(HORIZONS).to_pandas()
-
-
 # ---------------------------------------------------------------------------
 # Modelos — figuras interactivas
 # ---------------------------------------------------------------------------
@@ -1263,36 +1258,6 @@ def fig_predicted_vs_real(preds: pd.DataFrame, model: str, horizon: int) -> go.F
     return fig
 
 
-def fig_garch_volatility(garch: pd.DataFrame, horizon: int) -> go.Figure:
-    """Volatilidad predicha (GARCH) vs. realizada, para un horizonte puntual."""
-    sub = garch[garch["horizon"] == horizon].sort_values("date")
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=sub["date"], y=sub["realized_vol"], mode="lines",
-            line=dict(color=_MODEL_COLOR_REAL, width=1.3), name="Volatilidad realizada",
-            hovertemplate="%{x|%Y-%m-%d}: %{y:.4f}<extra>Realizada</extra>",
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=sub["date"], y=sub["predicted_vol"], mode="lines",
-            line=dict(color=_MODEL_COLOR_PRED, width=1.6), name="Volatilidad predicha (GARCH)",
-            hovertemplate="%{x|%Y-%m-%d}: %{y:.4f}<extra>GARCH</extra>",
-        )
-    )
-    fig.update_layout(
-        title=f"GARCH(1,1) t-Student — horizonte {horizon} día(s) (val)",
-        xaxis_title="Fecha",
-        yaxis_title="Volatilidad (desvío del retorno)",
-        hovermode="x unified",
-        height=420,
-        margin=dict(l=0, r=0, t=40, b=0),
-    )
-    return fig
-
-
 # ---------------------------------------------------------------------------
 # Modelos — sección completa
 # ---------------------------------------------------------------------------
@@ -1307,7 +1272,6 @@ def render_modelos_section() -> None:
     preds = load_model_predictions()
     summary = load_model_metrics_summary()
     naive = load_naive_baseline()
-    garch = load_garch_preds()
 
     if preds.empty:
         st.warning(
@@ -1316,18 +1280,17 @@ def render_modelos_section() -> None:
         )
         return
 
-    tab_resumen, tab_detalle, tab_garch = st.tabs(
-        ["Resumen (todos los modelos)", "Predicho vs. real (por modelo)", "GARCH — Volatilidad"]
+    tab_resumen, tab_detalle = st.tabs(
+        ["Resumen (todos los modelos)", "Predicho vs. real (por modelo)"]
     )
 
     with tab_resumen:
         horizon = st.selectbox("Horizonte", HORIZONS, key="resumen_horizon")
         st.plotly_chart(fig_rmse_comparison(summary, naive, horizon), use_container_width=True)
         st.caption(
-            "La dirección del retorno diario no es pronosticable con los datos "
-            "disponibles: nueve métodos independientes empatan (o empeoran) frente "
-            "al naive. GARCH es la excepción — predice volatilidad, no dirección "
-            "(pestaña 'GARCH — Volatilidad')."
+            "Ni la dirección ni la volatilidad del retorno diario son pronosticables "
+            "con los datos disponibles: los diez modelos (nueve de dirección + GARCH "
+            "de volatilidad) empatan o empeoran frente a su naive respectivo."
         )
         st.dataframe(
             summary[summary["horizon"] == horizon][["label", "family", "feature_set", "rmse", "mae", "n"]]
@@ -1346,18 +1309,6 @@ def render_modelos_section() -> None:
         with col2:
             horizon_d = st.selectbox("Horizonte", HORIZONS, key="detalle_horizon")
         st.plotly_chart(fig_predicted_vs_real(preds, model, horizon_d), use_container_width=True)
-
-    with tab_garch:
-        if garch.empty:
-            st.warning("No se encontraron predicciones de GARCH en `results/track_a/`.")
-        else:
-            horizon_g = st.selectbox("Horizonte", HORIZONS, key="garch_horizon")
-            st.plotly_chart(fig_garch_volatility(garch, horizon_g), use_container_width=True)
-            st.caption(
-                "GARCH(1,1) con innovaciones t-Student reduce ~39-40% el RMSE de "
-                "varianza condicional frente al naive (varianza constante) — el único "
-                "hallazgo positivo de Bloque 2."
-            )
 
 
 # ---------------------------------------------------------------------------
