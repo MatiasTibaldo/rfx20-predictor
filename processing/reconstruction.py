@@ -62,10 +62,19 @@ def reconstruct_index(
 ) -> pl.DataFrame:
     """Reconstruct the RFX20 index value from constituent series.
 
-    Formula: index_t = Σ_i(close_i_t × quantity_i_t) / divisor_t
+    Formula: index_t = Σ_i(close_i_t × quantity_i_t)
 
-    The divisor is forward-filled to cover trading days between official
-    publication dates.
+    ``quantity`` in ``rfx20_composition.parquet`` is already divisor-adjusted
+    at the source (verified directly against the official spot series across
+    the full history: the raw sum matches ``rfx20_spot`` to the cent on every
+    date checked) — dividing by ``divisor`` again used to double-normalize
+    the result, shrinking it by a factor of ~10^8 and making every date look
+    like a reconstruction failure. ``divisores`` is kept as a parameter for
+    signature stability (and because the Oct-2023 base-change window below
+    still needs a manual factor — the source data's divisor-adjustment
+    has a real, separate transition seam there, confirmed empirically to
+    still require the ×10 correction after removing this division), but it
+    no longer enters the computation itself.
 
     Args:
         ohlcv_by_ticker: Mapping of ticker → OHLCV DataFrame (requires
@@ -73,6 +82,8 @@ def reconstruct_index(
         composition: Index composition DataFrame with columns
             ``date`` (Date), ``ticker`` (String), ``quantity`` (Float64).
         divisores: Divisor series with ``date`` (Date) and ``divisor`` (Float64).
+            Unused in the computation (see above) — kept for signature
+            stability and potential future diagnostics.
 
     Returns:
         DataFrame with columns ``date`` (Date) and ``reconstructed`` (Float64).
@@ -90,29 +101,12 @@ def reconstruct_index(
         how="diagonal",
     )
 
-    numerator = (
+    result = (
         composition.select("date", "ticker", "quantity")
         .join(closes, on=["date", "ticker"], how="inner")
         .with_columns((pl.col("close") * pl.col("quantity")).alias("weighted_close"))
         .group_by("date")
-        .agg(pl.col("weighted_close").sum().alias("numerator"))
-        .sort("date")
-    )
-
-    # Forward-fill the divisor to every date present in the numerator.
-    div_filled = (
-        numerator.select("date")
-        .join(divisores, on="date", how="left")
-        .sort("date")
-        .with_columns(pl.col("divisor").forward_fill())
-    )
-
-    result = (
-        numerator.join(div_filled, on="date", how="left")
-        .with_columns(
-            (pl.col("numerator") / pl.col("divisor")).alias("reconstructed")
-        )
-        .select("date", "reconstructed")
+        .agg(pl.col("weighted_close").sum().alias("reconstructed"))
         .sort("date")
     )
 
