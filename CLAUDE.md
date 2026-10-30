@@ -315,6 +315,57 @@ proyecto**, no es precedente general. `rfx20_composition.parquet`
 regenerado (`ingestion.composition_runner`). Ver
 `docs/decisions/byma_nov2022_error_intermedio.md`.
 
+### Punto 1 del feedback de los directores: validación manual de splits, 28/28 componentes (30 oct 2026)
+
+Segunda ronda de validación de splits, esta vez **manual** (el alumno
+investigó cada uno de los 28 componentes contra fuentes externas primarias,
+en vez de los detectores automáticos de digrin.com/Alpha Spread del barrido
+de sep-2026) — motivada por el Punto 1 del feedback de los directores de
+tesis sobre reconciliación de precios/cantidades. Cada hallazgo se cruzó
+contra el OHLCV crudo del proyecto antes de aceptarlo. Ver
+`docs/decisions/validacion_manual_splits_oct2026.md` para el detalle
+ticker por ticker.
+
+**Resultado: 2 splits reales encontrados que el barrido automático anterior
+no había detectado** (confirma que ese método tiene falsos negativos,
+además de los falsos positivos ya conocidos):
+
+- **COME, 2020-08-24, ratio 1.238:1** — agregado a
+  `config/data_corrections.yaml::splits`. Nodo 3 re-corrido, confirmado que
+  el ajuste elimina el salto (`log_return` pasa de -16.7% crudo a +3.1%
+  normal post-ajuste).
+- **AGRO, 2019-04-29, ratio 1.3333:1 (4:3)** — agregado a la misma sección.
+  AGRO no estaba en el índice en esa fecha (ingresó 2024-05-02, después de
+  ambos splits que tiene), así que **Enfoque A (default,
+  `enforce_index_only=True`) no lo aplica** — mismo comportamiento que su
+  otro split ya existente (2023-11-03). Verificado, no es un bug.
+
+**6 candidatos chicos descartados** (ratio < 5%, movimiento gradual de
+varios días en el OHLCV crudo, no un escalón limpio aislado — mismo patrón
+de falso positivo ya documentado): CRES ×4 (2021-03-04, 2019-11-10/11,
+2018-11-07), MORI 2020-10-22, TGSU2 2019-11-10.
+
+**PAMP cerrado** ("posibles 4 splits" quedaba abierto desde sep-2026): sin
+ningún salto fuera de [0.78, 1.28] en 8 años de OHLCV crudo — si los 4
+rumoreados son reales, son todos demasiado chicos para requerir corrección.
+
+**4 hallazgos colaterales, no son splits** (confirmados por el alumno como
+movimientos de mercado reales, quedan pendientes aparte de este trabajo):
+
+1. Salto sistémico sin documentar el **2025-10-27**, visto en 8 de 28
+   tickers (BBAR, BMA, CEPU, METR, SUPV, TECO2, TGNO4, TRAN) — candidato
+   fuerte a nuevo `macro_event` (elecciones legislativas oct-2025).
+2. **SUPV, 2018-08-24 (-30.8%)** — sin explicar, no sistémico.
+3. **TXAR, 2023-10-23 (-22.8%)** — candidato a reacción a la 1ª vuelta
+   presidencial (22/10/2023), distinta del balotaje de noviembre ya
+   documentado.
+4. **COVID-19 marzo 2020** (YPFD 09 y 18-03) — pendiente menor ya señalado
+   en sep-2026, sigue sin sumarse formalmente a `macro_events`.
+
+Tabla consolidada actualizada en `docs/decisions/registro_splits_componentes.md`.
+Sin impacto en Bloque 2 (`features_long.parquet` no usa OHLCV por
+componente) — no hace falta re-entrenar ningún modelo por este cambio.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido

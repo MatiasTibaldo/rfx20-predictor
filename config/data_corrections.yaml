@@ -28,6 +28,18 @@ splits:
     verified: true
     notes: "Desdoblamiento 2.2443:1 (561/250). En índice hasta la fecha."
 
+  - ticker: COME
+    date: "2020-08-24"
+    ratio: 1.238
+    source: "Investigación manual del alumno (30 oct 2026) — ver docs/decisions/validacion_manual_splits_oct2026.md"
+    in_index: true
+    verified: true
+    notes: >
+      Desdoblamiento 1.238:1, sin documentar hasta esta ronda de validación
+      manual del Punto 1 del feedback de los directores. Confirmado contra
+      el OHLCV crudo: ratio observado 0.8328 el 2020-08-24 (esperado 0.808),
+      sin evento macro asociado esa fecha. En índice desde 2018-06-29.
+
   - ticker: AGRO
     date: "2023-11-03"
     ratio: 12.0
@@ -35,6 +47,20 @@ splits:
     in_index: false
     verified: true
     notes: "Desdoblamiento 12:1. Ingresó al índice el 2024-05-02, posterior al split."
+
+  - ticker: AGRO
+    date: "2019-04-29"
+    ratio: 1.3333
+    source: "Investigación manual del alumno (30 oct 2026) — ver docs/decisions/validacion_manual_splits_oct2026.md"
+    in_index: false
+    verified: true
+    notes: >
+      Desdoblamiento 4:3 (1.3333:1), sin documentar hasta esta ronda de
+      validación manual. Fuente externa reporta 2019-04-28 (no hábil); el
+      salto real en el OHLCV crudo aparece el 2019-04-29 (ratio 0.8065,
+      esperado 0.75). AGRO ingresó al índice recién el 2024-05-02,
+      posterior al split — no afecta el cálculo del RFX20, se corrige por
+      consistencia general de la serie OHLCV.
 
   - ticker: MORI
     date: "2018-08-01"

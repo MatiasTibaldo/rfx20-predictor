@@ -1,6 +1,10 @@
 # Registro consolidado de splits — los 28 componentes del RFX20
 
-**Fecha:** 16 de septiembre de 2026
+**Fecha:** 16 de septiembre de 2026 (actualizado 30 de octubre de 2026 — ver
+`docs/decisions/validacion_manual_splits_oct2026.md` para la segunda ronda de
+validación manual, Punto 1 del feedback de los directores: 2 splits nuevos
+confirmados — COME 2020-08-24 y AGRO 2019-04-29 — y PAMP cerrado como "sin
+split material")
 **Reemplaza como referencia central a:** `docs/decisions/splits_adjustment.md`,
 `docs/decisions/dividends_and_splits.md`, `docs/decisions/ypfd_split_2026.md`,
 `docs/decisions/desvios_cronicos_composicion_vs_ohlcv.md` — esos documentos
@@ -31,14 +35,14 @@ investigación.
 
 | ticker | split(s) conocido(s) | ¿ajustado en origen? | fuente | notas |
 |---|---|---|---|---|
-| AGRO | 2023-11-03, 12:1 | No | validate_variation.py | fuera del índice en la fecha |
+| AGRO | 2023-11-03, 12:1; **2019-04-29, 1,3333:1 (4:3) — nuevo, 30-oct-2026** | No | validate_variation.py; validación manual (ambos) | fuera del índice en ambas fechas (ingresó 2024-05-02) — Enfoque A no aplica ninguno de los dos por default |
 | ALUA | 2015-05-19, 1.12:1 | — | digrin.com | fuera de ventana |
 | APBR | 2008, 2:1 | — | seekingalpha.com | fuera de ventana (CEDEAR/ADR de Petrobras) |
 | BBAR | 2017-07-03, 1.021:1 | — | digrin.com | fuera de ventana (justo antes del inicio de datos) |
 | BMA | — | — | — | **sin split real**: digrin.com reportó 6 eventos de 1.09 en 2023, verificados contra el OHLCV crudo y descartados — son tendencia normal de varios días, no un escalón limpio en una fecha puntual (ver "Falsos positivos" abajo) |
 | BYMA | 2022-07-06 (10:1), 2024-05-10 (5:1), 2025-05-25 (2:1) | **Sí** | base.dividendos2.csv + Excel + alumno | `composition_only_splits` |
 | CEPU | 2017-02-03, 8:1 | — | digrin.com | fuera de ventana |
-| COME | 2019-08-05 (1.7:1), 2025-08-13 (2.2443:1) | No | investing.com + validate_variation.py | `splits:`, salto real confirmado |
+| COME | 2019-08-05 (1.7:1), 2025-08-13 (2.2443:1), **2020-08-24 (1.238:1) — nuevo, 30-oct-2026** | No | investing.com + validate_variation.py; validación manual (el 3º) | `splits:`, salto real confirmado en los 3 |
 | CRES | — | — | — | **sin split real**: digrin.com reportó 3 eventos chicos (2019-11-11, 2023-05-03, 2023-10-10), verificados y descartados — mismo patrón de falso positivo que BMA |
 | CVH | ninguno | — | stockanalysis.com, Yahoo Finance | sin split conocido |
 | ECOG | 2025-08-19, 10:1 | **No** | investing.com (tabla dedicada) | `splits:`, salto real confirmado (25.025,0 → 2.475,0); fuera del índice en la fecha |
@@ -49,7 +53,7 @@ investigación.
 | METR | ninguno | — | consenso de fuentes | sin split conocido |
 | MIRG | 2026-08-03, 10:1 | **Sí** | alumno (coincide con split YPFD) | `composition_only_splits` |
 | MORI | 2018-08-01 (1.8348:1), 2025-09-05 (7.0947:1) | No | validate_variation.py | `splits:`, salto real confirmado |
-| PAMP | posibles "4 splits" sin fecha/ratio confirmado (acción local); el ADR "PAM" en NYSE tiene 0 splits | — | búsqueda web, sin fuente confiable | **abierto** — no se pudo verificar sin fechas. Revisar con fuente primaria (BYMA/CNV) si se necesita certeza |
+| PAMP | posibles "4 splits" sin fecha/ratio confirmado (acción local); el ADR "PAM" en NYSE tiene 0 splits | — | búsqueda web, sin fuente confiable | **cerrado sin split material (30-oct-2026)** — sin ningún salto fuera de [0,78;1,28] en 8 años de OHLCV crudo; si los 4 rumoreados son reales, son todos demasiado chicos para requerir corrección |
 | SUPV | "1471-por-1464" reportado por Alpha Spread | — | — | descartado como artefacto de parseo, ratio absurdo, no es un split real |
 | TECO2 | ninguno | — | Alpha Spread (snippet) | sin split conocido |
 | TGNO4 | ninguno | — | Yahoo Finance | sin split conocido |
@@ -84,9 +88,7 @@ escalón de un día para el otro, descartarlo.
 
 ## Pendientes
 
-1. **PAMP** — posibles "4 splits" de la acción local sin fecha/ratio
-   verificable. No se pudo confirmar con las fuentes disponibles. Baja
-   prioridad (ningún indicio de magnitud grande), pero queda abierto.
+1. ~~**PAMP**~~ — cerrado 30-oct-2026, ver tabla arriba.
 2. **Fusión VALO → GFV** (hallazgo colateral, no es un split): Banco de
    Valores absorbió a su controlante Grupo Financiero Valores S.A.
    (reorganización aprobada por CNV, efectiva 2025-01-01); el ticker
@@ -96,3 +98,21 @@ escalón de un día para el otro, descartarlo.
    pero si en el futuro el feed empieza a reportar bajo "GFV" habrá que
    tratarlo como un evento de continuidad de serie (similar a un cambio de
    nombre, no un split — ver nota de TXAR/ERAR arriba para el precedente).
+3. **Salto sistémico sin documentar el 2025-10-27** (hallazgo colateral de
+   la validación manual, 30-oct-2026, no es un split): visto en 8 de 28
+   tickers (BBAR +31%, BMA +28,6%, CEPU +28,5%, METR +36,1%, SUPV +36,9%,
+   TECO2 +28,7%, TGNO4 +35,3%, TRAN +29,5%) — candidato fuerte a nuevo
+   `macro_event` (elecciones legislativas de octubre 2025), confirmado por
+   el alumno como movimiento de mercado real. Pendiente: agregarlo
+   formalmente a `config/data_corrections.yaml::macro_events`.
+4. **SUPV 2018-08-24 (-30,8%)** — sin explicar, no visto en ningún otro
+   ticker (no sistémico). Confirmado por el alumno como movimiento de
+   mercado, no split. Queda sin investigar el motivo puntual.
+5. **TXAR 2023-10-23 (-22,8%)** — candidato a reacción de la 1ª vuelta de
+   las elecciones presidenciales (22/10/2023), distinta del balotaje de
+   noviembre ya documentado. Confirmado por el alumno como movimiento de
+   mercado. Pendiente: verificar si afecta a otros tickers esa fecha y
+   documentar como `macro_event` si corresponde.
+6. **COVID-19, marzo 2020** (YPFD 09 y 18-03, el 16-03 ya identificado
+   antes) — pendiente menor ya señalado en `CLAUDE.md`, sigue sin sumarse
+   formalmente a `macro_events`.
