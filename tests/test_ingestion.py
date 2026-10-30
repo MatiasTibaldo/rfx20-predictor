@@ -472,11 +472,18 @@ class TestPrimaryRESTConnector:
         }
         assert connector.validate_response(payload) is True
 
-    def test_validate_response_rejects_no_data_true(self, mock_auth_manager):
-        """validate_response debe rechazar cuando noData es True."""
+    def test_validate_response_accepts_no_data_true(self, mock_auth_manager):
+        """validate_response debe aceptar cuando noData es True.
+
+        noData=True es puramente informativo (indica que no hay datos
+        ANTERIORES a la fecha solicitada, no que la respuesta sea
+        inválida) — ver el comentario en fetch() sobre este campo.
+        validate_response solo verifica la estructura (dict + "series"
+        como lista), no el valor de noData.
+        """
         connector = PrimaryRESTConnector(auth_manager=mock_auth_manager)
         payload = {"nextTime": None, "noData": True, "series": []}
-        assert connector.validate_response(payload) is False
+        assert connector.validate_response(payload) is True
 
     def test_validate_response_rejects_missing_series_key(self, mock_auth_manager):
         """validate_response debe rechazar si falta la clave 'series'."""
