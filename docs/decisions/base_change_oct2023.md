@@ -57,9 +57,13 @@ Aplicar factor de corrección ×10 en la capa de procesamiento para el rango
 ## Resultado post-corrección
 
 De 14 días con error > 1%, quedaron 8 días con error máximo de 3.25%.
-Esos 8 casos (noviembre 2022 y mayo 2024) se analizarán manualmente
-en una etapa posterior — pueden corresponder a dividendos no ajustados
-u otras diferencias de fuente.
+Esos 8 casos (noviembre 2022 y mayo 2024) se analizaron manualmente en una
+etapa posterior. El caso de noviembre 2022 resultó ser un error de
+transcripción puntual, corregido (ver
+`docs/decisions/byma_nov2022_error_intermedio.md`). El cluster de mayo 2024
+quedó explicado como ruido de snapshot entre composición y OHLCV en una
+semana de alta volatilidad, sin requerir corrección (ver
+`docs/decisions/punto2_reconciliacion_oct2026.md`, sección 3).
 
 ## Evento único
 

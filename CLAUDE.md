@@ -217,7 +217,8 @@ cambio de base oct-2023). `features.runner` ya re-ejecutado con el fix. Ver
 `docs/decisions/sept2019_composicion_corrupta.md` para el detalle completo,
 incluye 4 pendientes nuevos (recomposición de cartera desfasada 1 día hábil,
 tercer split BYMA no documentado ~2:1 en 2025/2026, MIRG con desvío crónico
-sin investigar, cluster menor may-2024). Pendiente decidir si se re-corre
+sin investigar, cluster menor may-2024 — explicado 30-oct-2026, ver Punto 2
+más abajo). Pendiente decidir si se re-corre
 Bloque 2 completo dado el fix (afecta 0,24% de la serie, no se espera cambio
 de conclusión).
 
@@ -229,8 +230,8 @@ visualización más abajo) se revisaron los outliers restantes de `log_return`
 post-elecciones legislativas PBA, Merval -13%), y 3 atribuibles al crash
 global de COVID marzo 2020 (09/16/18-03-2020, sin agregar todavía a
 `macro_events` — pendiente menor). El split BYMA de `data_corrections.yaml` ya cubre
-el tercer pendiente de la lista anterior. Quedan MIRG y el cluster de
-mayo-2024 sin investigar.
+el tercer pendiente de la lista anterior. El cluster de mayo-2024 quedó
+explicado (ver Punto 2 más abajo). Queda MIRG sin investigar.
 
 ### Re-corrida de Bloque 2 post-fix (16 sep 2026) — GARCH ya no es positivo
 
@@ -365,6 +366,39 @@ movimientos de mercado reales, quedan pendientes aparte de este trabajo):
 Tabla consolidada actualizada en `docs/decisions/registro_splits_componentes.md`.
 Sin impacto en Bloque 2 (`features_long.parquet` no usa OHLCV por
 componente) — no hace falta re-entrenar ningún modelo por este cambio.
+
+### Punto 2 del feedback de los directores: reconciliación completa (30 oct 2026)
+
+Validación de los 3 sub-puntos del Punto 2 (homogeneidad del cambio de base
+oct-2023 y reconciliación reconstrucción-vs-spot sobre toda la historia). Ver
+`docs/decisions/punto2_reconciliacion_oct2026.md` para el detalle completo.
+
+- **Homogeneidad de base**: verificado sobre `features_long.parquet` (el
+  dataset real de entrenamiento, no solo el spot crudo) que el ajuste de
+  `index_base_changes` ya elimina el salto de -89.7% del cambio de base del
+  09-oct-2023 antes de calcular `log_return` — el target nunca vio esa
+  discontinuidad. Único retorno >10% en 3 semanas alrededor del corte:
+  -12.5% el 23-oct-2023, explicado por la 1ª vuelta presidencial, no por el
+  cambio de base.
+- **Reconciliación completa, hallazgo principal**: `processing/reconstruction.py`
+  mezcla `composición.quantity × OHLCV.close` (clasificado "inseguro" en
+  `docs/decisions/fuentes_independientes_composicion_ohlcv.md`) y da 99.2% de
+  días fuera de tolerancia en toda la historia. Reconstruyendo con una sola
+  fuente (`composición.quantity × composición.close`, como ya hace
+  `app.py::compute_index_reconstruction`) ese error cae a **0.20% (4/1981
+  días)** — confirma que el desvío crónico era un artefacto de mezclar bases
+  (BYMA/YPFD/MIRG), no un problema real de datos. El cluster 2020-06-30 de la
+  primera re-corrida desaparece con este método.
+- **Cluster mayo-2024 (4 días, máx 3.25%), explicado**: divisor y quantities
+  congelados esos días (descarta rebalanceo); `composición.close` vs.
+  `OHLCV.close` coincide exacto el resto del mes pero se desvía 1-6% en las
+  20 componentes simultáneamente justo en la semana de mayor volatilidad del
+  período — ruido de snapshot entre fuentes (instantes de cierre
+  ligeramente distintos), no error de datos. Sin corrección necesaria.
+
+Sin impacto en el dataset de entrenamiento (`features_long.parquet` no usa
+reconstrucción ni OHLCV por componente). `processing/reconstruction.py`
+migrar al método de fuente única queda como mejora pendiente, no urgente.
 
 ### Próximo paso (retomar acá)
 
