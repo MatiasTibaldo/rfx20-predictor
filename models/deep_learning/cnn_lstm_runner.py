@@ -65,6 +65,7 @@ def main(
             model_factory_for_input_size=lambda n: CNNLSTMRegressor(
                 input_size=n, hidden_size=HIDDEN_SIZE
             ),
+            purge_horizon=h,
         )
         logger.info(
             f"[cnn_lstm_runner] h={h}: lookback elegido={result.lookback} "

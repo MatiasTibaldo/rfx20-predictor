@@ -47,6 +47,7 @@ __all__ = [
     "Sequences",
     "prepare_frame",
     "build_sequences",
+    "purge_train_tail",
     "scale_sequences",
     "TrainResult",
     "train_with_early_stopping",
@@ -157,6 +158,32 @@ def build_sequences(
         mask = split_arr == split_name
         out[split_name] = Sequences(X=X[mask], y=y[mask], dates=dates_arr[mask])
     return out
+
+
+def purge_train_tail(sequences: dict[str, Sequences], horizon: int) -> dict[str, Sequences]:
+    """Drop the chronologically last `horizon` train sequences (by anchor date).
+
+    A train-anchored window's target looks `horizon` business days ahead,
+    which for the last few train dates reaches past the train/val boundary
+    into val. Same purge as ``models.ml.common.split_arrays(purge_horizon=...)``,
+    applied to windowed sequences instead of flat rows — ``build_sequences``
+    already sorts by date, so the tail slice is exactly the chronologically
+    latest train windows.
+
+    Args:
+        sequences: Output of ``build_sequences`` (per-split dict).
+        horizon: Number of trailing train sequences to drop.
+
+    Returns:
+        A copy of ``sequences`` with ``"train"`` trimmed; other splits untouched.
+    """
+    train_seq = sequences["train"]
+    cut = max(0, len(train_seq.y) - horizon)
+    purged = dict(sequences)
+    purged["train"] = Sequences(
+        X=train_seq.X[:cut], y=train_seq.y[:cut], dates=train_seq.dates[:cut]
+    )
+    return purged
 
 
 def scale_sequences(
@@ -276,6 +303,7 @@ def select_lookback(
     target_col: str,
     model_factory_for_input_size,
     lookback_candidates: list[int] = LOOKBACK_CANDIDATES,
+    purge_horizon: int = 0,
 ) -> TrainResult:
     """Grid search over lookback_candidates, selected by early-stopping loss
     (never by val — val is reserved for the final, single evaluation).
@@ -287,6 +315,9 @@ def select_lookback(
         model_factory_for_input_size: Callable(input_size) -> nn.Module,
             e.g. `lambda n: LSTMRegressor(input_size=n)`.
         lookback_candidates: Lookback lengths to try.
+        purge_horizon: Forwarded to ``purge_train_tail`` — pass the real
+            forecast horizon so the last train windows reaching into val
+            are dropped before the early-stopping split is carved.
 
     Returns:
         TrainResult for the winning lookback.
@@ -294,6 +325,8 @@ def select_lookback(
     best: TrainResult | None = None
     for lookback in lookback_candidates:
         seqs = build_sequences(frame, feature_cols, target_col, lookback)
+        if purge_horizon > 0:
+            seqs = purge_train_tail(seqs, purge_horizon)
         fit_seq, earlystop_seq = chronological_earlystop_split(seqs["train"])
         scaler, (X_fit, X_earlystop) = scale_sequences(fit_seq.X, earlystop_seq.X)
 

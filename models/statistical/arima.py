@@ -147,11 +147,11 @@ def walk_forward_evaluate(
 
     For each date in the val split, fits (order, seasonal_order fixed) on
     every log_return observation up to and including that date (train +
-    val-so-far), then forecasts ``max(horizons)`` steps ahead. The forecast
-    at step h lands exactly on ``log_return_fwd_h`` of the current date,
-    since that column is defined as ``log_return`` shifted -h rows (see
-    ``processing/returns.py``) — a single day's return h days ahead, not a
-    cumulative h-day return.
+    val-so-far), then forecasts ``max(horizons)`` steps ahead. ``log_return_fwd_h``
+    (see ``processing/returns.py``) is the CUMULATIVE h-day log return,
+    ``ln(close_{t+h}/close_t)`` — so the matching prediction is the SUM of
+    the first h one-step-ahead forecasts (steps 1..h), not the lone h-th
+    step's point forecast.
 
     Args:
         df: Must contain ``date``, ``log_return``, ``split``, and
@@ -193,7 +193,7 @@ def walk_forward_evaluate(
                     "date": current_date,
                     "horizon": h,
                     "y_true": y_true,
-                    "y_pred": float(forecast[h - 1]),
+                    "y_pred": float(np.sum(forecast[:h])),
                 }
             )
 

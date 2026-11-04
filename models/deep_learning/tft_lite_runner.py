@@ -64,6 +64,7 @@ def main(
             feature_cols,
             target_col,
             model_factory_for_input_size=lambda n: TFTLiteRegressor(input_size=n, d_model=D_MODEL),
+            purge_horizon=h,
         )
         logger.info(
             f"[tft_lite_runner] h={h}: lookback elegido={result.lookback} "

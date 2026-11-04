@@ -44,16 +44,21 @@ def _winsorized_variance(returns: np.ndarray, lower_pct: float = 1.0, upper_pct:
 def _naive_variance_metrics(
     df: pl.DataFrame, train_variance: float, horizons: list[int]
 ) -> dict[int, dict[str, float]]:
-    """Reference baseline: constant variance = unconditional variance of train.
+    """Reference baseline: constant variance = h * unconditional daily variance of train.
 
     The GARCH analogue of ARIMA's "predict return = 0" naive baseline — a
     single fixed number instead of a model that reacts to recent volatility.
+    ``log_return_fwd_h`` is the cumulative h-day return (see
+    ``processing/returns.py``), so its naive variance scales with h (sum of
+    h uncorrelated daily variances) — not a flat `train_variance` repeated
+    across horizons, which would understate the naive at h=3/h=5 and
+    artificially inflate GARCH's apparent improvement over it.
     """
     val = df.filter(pl.col("split") == "val")
     metrics = {}
     for h in horizons:
         sq_return_actual = (val[f"log_return_fwd_{h}"].drop_nulls() ** 2).to_numpy()
-        variance_pred = np.full_like(sq_return_actual, train_variance)
+        variance_pred = np.full_like(sq_return_actual, train_variance * h)
         metrics[h] = {
             "rmse": float(np.sqrt(np.mean((variance_pred - sq_return_actual) ** 2))),
             "qlike": float(

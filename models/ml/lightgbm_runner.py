@@ -56,7 +56,7 @@ def main(
     for h in horizons:
         logger.info(f"[lightgbm_runner] Horizonte {h}: construyendo feature matrix...")
         model_frame = build_model_frame(df, horizon=h, exclude_structural_gaps=False)
-        X_train, y_train, feature_names, _ = split_arrays(model_frame, "train")
+        X_train, y_train, feature_names, _ = split_arrays(model_frame, "train", purge_horizon=h)
         X_val, y_val, _, dates_val = split_arrays(model_frame, "val")
         logger.info(
             f"[lightgbm_runner] h={h}: train={len(y_train)} filas, val={len(y_val)} filas, "

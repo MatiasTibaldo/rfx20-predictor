@@ -125,7 +125,7 @@ def build_model_frame(
 
 
 def split_arrays(
-    model_frame: pl.DataFrame, split: str
+    model_frame: pl.DataFrame, split: str, purge_horizon: int = 0
 ) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray]:
     """Extract (X, y, feature_names, dates) for one split ('train' or 'val').
 
@@ -139,13 +139,26 @@ def split_arrays(
     ``dates`` lines up row-for-row with X/y — added so runners can persist
     (date, y_true, y_pred) predictions parquets for visualization, the same
     convention already used by the statistical and deep learning runners.
+
+    Args:
+        purge_horizon: When > 0 and ``split == "train"``, drops the
+            chronologically last ``purge_horizon`` rows of train — their
+            target looks that many business days into the future, which
+            can reach past the train/val boundary into val. Mirrors, at
+            the FINAL train/val boundary, the same purge ``purged_splits``
+            already applies inside each internal CV fold during
+            hyperparameter search (see docs/decisions/long_horizons_track_a.md).
+            Has no effect on ``split == "val"``.
     """
-    subset = model_frame.filter(pl.col("split") == split)
+    subset = model_frame.filter(pl.col("split") == split).sort("date")
     feature_names = [c for c in subset.columns if c not in ("date", "split", "target")]
 
     structural_gap_cols = {c for cols in STRUCTURAL_GAP_GROUPS.values() for c in cols}
     non_gap_features = [c for c in feature_names if c not in structural_gap_cols]
     subset = subset.filter(pl.all_horizontal([pl.col(c).is_not_null() for c in non_gap_features]))
+
+    if purge_horizon > 0 and split == "train":
+        subset = subset.head(max(0, subset.height - purge_horizon))
 
     X = subset.select(feature_names).to_numpy()
     y = subset["target"].to_numpy()

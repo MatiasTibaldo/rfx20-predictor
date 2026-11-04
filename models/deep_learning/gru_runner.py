@@ -68,6 +68,7 @@ def main(
             model_factory_for_input_size=lambda n: GRURegressor(
                 input_size=n, hidden_size=HIDDEN_SIZE
             ),
+            purge_horizon=h,
         )
         logger.info(
             f"[gru_runner] h={h}: lookback elegido={result.lookback} "

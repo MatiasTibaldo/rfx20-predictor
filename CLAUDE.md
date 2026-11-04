@@ -400,6 +400,62 @@ Sin impacto en el dataset de entrenamiento (`features_long.parquet` no usa
 reconstrucción ni OHLCV por componente). `processing/reconstruction.py`
 migrar al método de fuente única queda como mejora pendiente, no urgente.
 
+### Punto 3 del feedback de los directores: target acumulado, Bloque 2 re-corrido (3 nov 2026)
+
+El director notó que el RMSE naive era casi idéntico en h=1/3/5 — señal de que
+`log_return_fwd_h` podía estar midiendo el retorno de un solo día en t+h en
+vez del retorno acumulado `ln(Pt+h/Pt)` que describe la tesis. **Confirmado en
+código**: así era. Corregido en `processing/returns.py` (ahora calcula el
+acumulado directo desde `close`, verificado al dígito contra la suma de
+retornos diarios en 4+ fechas) y propagado a ARIMA/GARCH (pronóstico =
+`sum(forecast[:h])`, antes `forecast[h-1]`) y al naive de GARCH (escala como
+`h × varianza`, antes constante). Ver
+`docs/decisions/punto3_target_cumulativo_oct2026.md` para el detalle completo.
+
+Se re-corrieron los 10 modelos con sus runners reales sobre el target
+corregido. RMSE (% vs. naive): ARIMA -0,06/+0,06/-0,12%, GARCH
++0,88/+1,03/+1,42%, RF -0,12/+2,81/+3,50%, SVM +0,47/+0,32/+2,68%, XGBoost
++2,80/+8,47/+5,84%, LightGBM +4,08/+6,37/+5,85%, LSTM +1,04/+0,48/+1,57%, GRU
++1,84/+3,61/+5,20%, CNN-LSTM +2,15/+2,19/+1,04%, TFT-lite +2,50/+6,15/+5,41%
+(h=1/h=3/h=5). **La conclusión central no cambia** (ningún modelo le gana de
+forma consistente al naive), pero **GARCH deja de estar empatado — ahora
+pierde en los 3 horizontes** tanto en RMSE como en QLIKE, cerrando la idea de
+que la volatilidad era un lado ganador de Bloque 2. ARIMA selecciona orden
+(0,0,1) (MA(1), AIC=-6996.37) — responde la inconsistencia h=1 que señalaba
+el director: un MA(1) real no es idéntico al naive, no es un bug.
+
+Pendiente: actualizar `docs/decisions/arima_baseline_track_a.md`,
+`garch_volatility_track_a.md` y el resto de los decision docs de Bloque 2 con
+esta tabla, regenerar `evaluation/figures.py`, y actualizar los documentos de
+tesis.
+
+### Punto 4 del feedback de los directores: protocolo de validación temporal (3 nov 2026)
+
+El director pidió reforzar la purga de fuga por superposición de objetivos
+(últimas etiquetas de train mirando precios de val) en tres lugares — corte
+final train/val, folds internos de CV, y porción de early stopping — y
+confirmar que los escaladores se ajustan solo dentro de cada fold. Ver
+`docs/decisions/punto4_purga_validacion_temporal_oct2026.md`.
+
+**Verificado código por código, ya resuelto en el mismo cambio del Punto 3**:
+`purge_horizon` (nuevo, en `models/ml/common.py::split_arrays`) purga el
+corte final train/val en los 4 runners de ML; `purged_splits` (ya existente)
+sigue purgando los folds internos de CV; `purge_train_tail` (nuevo, en
+`models/deep_learning/common.py`) purga antes de recortar la porción de
+early stopping en los 4 runners de DL — orden confirmado:
+`build_sequences → purge_train_tail → chronological_earlystop_split →
+scale_sequences`. Los escaladores (`StandardScaler`, tanto en el `Pipeline`
+de SVM como en `scale_sequences` de DL) se ajustan exclusivamente sobre el
+train purgado, nunca sobre val. **La tabla de resultados del Punto 3 ya
+cumple este protocolo — no hace falta re-correr nada por este punto.**
+
+Pendiente (documentación, no afecta resultados): trazar por escrito cuándo
+quedó reservado el test (86 filas, 2026-04-20 → 2026-08-25, ver
+`docs/decisions/temporal_split_and_consolidation.md`) y si se modificó
+alguna decisión después; confirmar que todos los predictores (no solo el
+spot) están disponibles en ese tramo; explicitar la asimetría de refit
+diario (ARIMA/GARCH) vs. fijo (resto) en la redacción de metodología.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido

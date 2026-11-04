@@ -163,9 +163,15 @@ def walk_forward_evaluate_variance(
     For each date in the val split, fits (p, q, dist fixed) on every
     log_return observation up to and including that date (train +
     val-so-far, scaled by SCALE), then forecasts conditional variance
-    ``max(horizons)`` steps ahead. Compared against the squared actual
-    return at that horizon (``log_return_fwd_h ** 2``) — the standard
-    zero-mean proxy for realized variance.
+    ``max(horizons)`` steps ahead. ``log_return_fwd_h`` (see
+    ``processing/returns.py``) is the CUMULATIVE h-day log return, so the
+    matching variance forecast is the SUM of the first h one-step-ahead
+    conditional variances (steps 1..h) — exact, not an approximation,
+    under this model's own ``mean="Zero"`` specification: returns are
+    conditionally uncorrelated across days, so Var(sum of h returns) =
+    sum of their variances. Compared against the squared actual
+    cumulative return at that horizon (``log_return_fwd_h ** 2``) — the
+    standard zero-mean proxy for realized variance.
 
     Args:
         df: Must contain ``date``, ``log_return``, ``split``, and
@@ -214,7 +220,7 @@ def walk_forward_evaluate_variance(
                 {
                     "date": current_date,
                     "horizon": h,
-                    "variance_pred": float(variance_forecast[h - 1]),
+                    "variance_pred": float(np.sum(variance_forecast[:h])),
                     "sq_return_actual": sq_return_actual,
                 }
             )

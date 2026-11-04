@@ -24,8 +24,12 @@ def add_returns(
 
     - ``log_return``: ln(close_t / close_{t-1})
     - ``simple_return``: close_t / close_{t-1} - 1
-    - ``log_return_fwd_{h}`` for each h in horizons: log_return shifted -h rows
-      (i.e., the log return h periods into the future).
+    - ``log_return_fwd_{h}`` for each h in horizons: the CUMULATIVE log
+      return from t to t+h, ``ln(close_{t+h} / close_t)`` — equivalently,
+      the sum of the h daily log returns from t+1 to t+h. Computed directly
+      from ``close`` (not as a sum of shifted ``log_return`` columns) to
+      avoid floating-point drift and to handle the trailing-null tail
+      identically to the single-day formula it replaces.
 
     Args:
         df: OHLCV DataFrame with ``date`` (Date) and ``close`` (Float64) columns.
@@ -48,7 +52,12 @@ def add_returns(
     )
 
     df = df.with_columns(
-        [pl.col("log_return").shift(-h).alias(f"log_return_fwd_{h}") for h in horizons]
+        [
+            (pl.col("close").shift(-h).log(math.e) - pl.col("close").log(math.e)).alias(
+                f"log_return_fwd_{h}"
+            )
+            for h in horizons
+        ]
     )
 
     logger.debug(

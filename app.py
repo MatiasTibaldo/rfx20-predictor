@@ -241,6 +241,21 @@ def load_processed_wide() -> pl.DataFrame | None:
 
 
 @st.cache_data(ttl=300)
+def load_features_long() -> pl.DataFrame | None:
+    """Load the actual model-training dataset (Nodo 4 output).
+
+    Unlike ``load_technical_index()`` (index-only, no macro/split), this is
+    exactly what ``models/*/*.py`` read via
+    ``DuckDBStore.load_parquet(layer="features", name="features_long")`` —
+    the file to validate manually when checking what the models actually see.
+    """
+    path = _FEATURES_V1 / "features_long.parquet"
+    if not path.exists():
+        return None
+    return pl.read_parquet(path)
+
+
+@st.cache_data(ttl=300)
 def compute_index_reconstruction() -> pl.DataFrame | None:
     comp_path = _RAW_V1 / "rfx20_composition.parquet"
     spot_path = _RAW_V1 / "rfx20_spot.parquet"
@@ -2007,6 +2022,99 @@ def render_processing_tab() -> None:
             )
 
 
+def render_features_tab() -> None:
+    """Validación manual de features_long.parquet — el archivo real de entrenamiento.
+
+    Dos partes: (1) un visor del dataset completo con filtro por split, para
+    inspeccionar cualquier columna; (2) un validador puntual de
+    log_return_fwd_{1,3,5} contra `close`, para confirmar a mano que el
+    retorno forward es el acumulado ln(close_t+h/close_t) — no el retorno de
+    un solo día en t+h — eligiendo una fecha y viendo la cascada de cierres
+    y retornos diarios que lo componen.
+    """
+    df = load_features_long()
+    if df is None:
+        st.info("features_long.parquet no encontrado. Ejecutar el Nodo 4 (features.runner) primero.")
+        return
+
+    df = df.sort("date")
+
+    # --- Summary metrics ---
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Filas", f"{len(df):,}")
+    c2.metric("Columnas", f"{len(df.columns):,}")
+    c3.metric("Fecha inicio", str(df["date"].min()))
+    c4.metric("Fecha fin", str(df["date"].max()))
+
+    split_counts = df.group_by("split").agg(pl.len().alias("n")).sort("split")
+    st.caption(
+        "Split: "
+        + ", ".join(
+            f"{row['split']}={row['n']:,}" for row in split_counts.to_dicts()
+        )
+    )
+
+    # --- Full dataset viewer, filterable by split ---
+    st.subheader("Dataset completo")
+    split_filter = st.selectbox(
+        "Split", ["(todos)"] + split_counts["split"].to_list(), key="features_split_filter"
+    )
+    view = df if split_filter == "(todos)" else df.filter(pl.col("split") == split_filter)
+    st.dataframe(view.to_pandas(), use_container_width=True, hide_index=True)
+
+    # --- Manual validation of forward returns ---
+    st.subheader("Validación manual: log_return_fwd_h en una fecha puntual")
+    st.caption(
+        "log_return_fwd_h = ln(close_t+h / close_t), el retorno ACUMULADO de t a "
+        "t+h — equivalente a la suma de los h retornos diarios siguientes. Elegí "
+        "una fecha para ver la cascada de cierres y confirmar el cálculo a mano."
+    )
+
+    date_min, date_max = df["date"].min(), df["date"].max()
+    selected_date = st.date_input(
+        "Fecha",
+        value=date_min,
+        min_value=date_min,
+        max_value=date_max,
+        key="features_validate_date",
+    )
+
+    dates_arr = df["date"].to_list()
+    try:
+        idx = dates_arr.index(selected_date)
+    except ValueError:
+        idx = next((i for i, d in enumerate(dates_arr) if d >= selected_date), None)
+        if idx is not None:
+            st.caption(f"Fecha exacta no disponible (no es día hábil), mostrando: {dates_arr[idx]}")
+
+    if idx is None or idx + 5 >= len(df):
+        st.warning("No hay suficientes días posteriores para validar los 3 horizontes (faltan datos al final de la serie).")
+        return
+
+    window = df.slice(idx, 6).select("date", "close", "log_return")
+    st.dataframe(window.to_pandas(), use_container_width=True, hide_index=True)
+
+    closes = window["close"].to_list()
+    daily_returns = window["log_return"].to_list()  # daily_returns[0] is log_return AT the anchor date (t), not used below
+    anchor_close = closes[0]
+
+    rows = []
+    for h in (1, 3, 5):
+        manual_cumulative = float(np.log(closes[h] / anchor_close))
+        manual_sum_daily = float(np.sum(daily_returns[1 : h + 1]))
+        col_value = df["log_return_fwd_" + str(h)][idx]
+        rows.append(
+            {
+                "horizonte": h,
+                "columna log_return_fwd_h": col_value,
+                "manual: ln(close_t+h/close_t)": manual_cumulative,
+                "manual: suma de retornos diarios": manual_sum_daily,
+                "diff (columna - manual)": None if col_value is None else col_value - manual_cumulative,
+            }
+        )
+    st.dataframe(pl.DataFrame(rows).to_pandas(), use_container_width=True, hide_index=True)
+
+
 # ---------------------------------------------------------------------------
 # Main layout
 # ---------------------------------------------------------------------------
@@ -2028,8 +2136,8 @@ def main() -> None:
     elif section == "Modelos":
         render_modelos_section()
     else:
-        tab_rfx20, tab_ohlcv, tab_proc = st.tabs(
-            ["Índice RFX20", "Series OHLCV", "Procesamiento"]
+        tab_rfx20, tab_ohlcv, tab_proc, tab_features = st.tabs(
+            ["Índice RFX20", "Series OHLCV", "Procesamiento", "Dataset de modelado"]
         )
         with tab_rfx20:
             render_rfx20_tab()
@@ -2037,6 +2145,8 @@ def main() -> None:
             render_ohlcv_tab()
         with tab_proc:
             render_processing_tab()
+        with tab_features:
+            render_features_tab()
 
 
 if __name__ == "__main__":

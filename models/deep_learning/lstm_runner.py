@@ -73,6 +73,7 @@ def main(
             model_factory_for_input_size=lambda n: LSTMRegressor(
                 input_size=n, hidden_size=HIDDEN_SIZE
             ),
+            purge_horizon=h,
         )
         logger.info(
             f"[lstm_runner] h={h}: lookback elegido={result.lookback} "
