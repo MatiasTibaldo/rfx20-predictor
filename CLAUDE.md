@@ -558,6 +558,45 @@ no débil).
   modelo ganador en ninguna dimensión, misma cita de eficiencia corregida
   a semifuerte.
 
+### Punto 8 del feedback de los directores: evaluación específica de GARCH (4 nov 2026)
+
+Ver `docs/decisions/punto8_garch_evaluacion_completa_nov2026.md` para el
+detalle completo de los 5 sub-puntos.
+
+- **QLIKE** agregado a los documentos de resultados (ya estaba en código,
+  faltaba mostrarlo).
+- **Benchmark EWMA** implementado (`scripts/punto8_ewma_benchmark.py`,
+  RiskMetrics λ=0,94). Resultado: **EWMA queda peor que GARCH** en los 3
+  horizontes (RMSE y QLIKE) — ninguno de los dos mejora sobre el naive de
+  varianza constante. Informativo: EWMA no tiene reversión a la media
+  (persistencia=1), GARCH sí (α+β=0,858) — en un mercado que revierte
+  volatilidad rápido (vida media ~4,5 ruedas), es esperable que el modelo
+  sin reversión pierda más.
+- **Aclarado qué se pronostica en h=3/h=5**: varianza del retorno
+  acumulado a h días (ya implementado correctamente desde el Punto 3), no
+  la de un día puntual futuro — ahora explícito en el texto, no solo en
+  el código.
+- **Corregido** el claim de que la varianza de train minimiza "por
+  construcción" el error fuera de muestra — esa garantía solo existe
+  dentro de train.
+- **Distinguida** la curtosis de las innovaciones t-Student (ν=4,57) de la
+  curtosis incondicional del proceso (821, Etapa 1 de ARIMA) — un GARCH
+  genera curtosis incondicional mayor que la de sus propias innovaciones
+  por el agrupamiento de volatilidad, no son el mismo número.
+
+**Corrección adicional (4 nov 2026):** `docs/avance_trabajo_final.md`
+("Versión 3", el documento de avance real enviado a los directores) tenía
+su propia sección de GARCH con los mismos números viejos (pre-Punto 3) y
+el mismo QLIKE "anunciado en metodología" pero no mostrado — y su propia
+síntesis de Bloque 2 con los mismos problemas del Punto 7 (lenguaje de
+"ausencia de señal", "mercados eficientes en su forma débil", observación
+1 sin matizar). Corregido en el mismo pase: tabla de GARCH actualizada con
+target acumulado + QLIKE + EWMA, síntesis con la formulación acotada y el
+hit-rate del Punto 7, "forma semifuerte" en vez de "débil". `docs/plan_de_accion.md`
+también tenía dos afirmaciones sueltas ("GARCH es el hallazgo central/único
+positivo de Bloque 2", sin banner de corrección cerca) — agregadas notas
+"[Actualizado 4-nov-2026]" en ambos lugares.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido

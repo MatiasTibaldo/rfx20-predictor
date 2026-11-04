@@ -30,13 +30,64 @@
 >
 > El naive winsorizado (varianza de train 20.4% menor) resulta **igual o
 > levemente peor** que el naive crudo en ambas métricas (RMSE y QLIKE), no
-> mejor — y GARCH sigue perdiendo contra los dos. Tiene sentido
-> estadísticamente: la varianza muestral cruda es, por construcción, el
-> estimador que minimiza el error cuadrático medio contra el target real
-> (asumiendo estacionariedad train→val); winsorizarla introduce un sesgo que
-> solo puede empeorar el RMSE, no mejorarlo. **Conclusión: la reversión de
-> GARCH no es un artefacto de un naive injusto — se sostiene con al menos
-> dos definiciones razonables de naive.** Se descarta seguir por esta línea.
+> mejor — y GARCH sigue perdiendo contra los dos. **Corrección (4-nov-2026,
+> Punto 8 del feedback de los directores):** la explicación original decía
+> que esto era esperable porque "la varianza muestral cruda es, por
+> construcción, el estimador que minimiza el error cuadrático medio contra
+> el target real" — esa garantía **no existe sobre validación**. Por
+> construcción, la varianza muestral de train minimiza el error cuadrático
+> **dentro de train** (es la definición misma del estimador de mínimos
+> cuadrados); que también resulte competitiva en val es una observación
+> empírica de este dataset, no una propiedad matemática garantizada —
+> dependería de que el proceso sea lo bastante estacionario entre ambos
+> períodos, algo que no se verificó de forma independiente acá.
+> Winsorizar sí introduce un sesgo conocido hacia abajo en la varianza
+> estimada, lo cual explica por qué no mejora — pero la ausencia de mejora
+> del naive crudo sobre val no se deriva de ninguna garantía "por
+> construcción". **Conclusión (sin cambios): la reversión de GARCH no es un
+> artefacto de un naive injusto — se sostiene con al menos dos definiciones
+> razonables de naive.** Se descarta seguir por esta línea.
+>
+> **Actualización 3 (4 nov 2026) — target corregido + benchmark EWMA.** La
+> re-corrida del Punto 3 del feedback (target acumulado, no retorno de un
+> solo día — ver `docs/decisions/punto3_target_cumulativo_oct2026.md`)
+> deja estas como las cifras vigentes (reemplazan a las de la tabla
+> "Resultado" más abajo, que quedan como registro histórico de la corrida
+> original del 5-sep-2026):
+>
+> | Horizonte | RMSE GARCH | RMSE naive | RMSE EWMA (λ=0,94) | QLIKE GARCH | QLIKE naive | QLIKE EWMA |
+> |---|---:|---:|---:|---:|---:|---:|
+> | 1 | 2,7724e-3 | 2,7481e-3 | 2,7784e-3 | -5,9879 | -6,0429 | -6,0105 |
+> | 3 | 7,7450e-3 | 7,6656e-3 | 7,7714e-3 | -4,7943 | -4,8946 | -4,8441 |
+> | 5 | 1,3443e-2 | 1,3255e-2 | 1,3544e-2 | -4,2237 | -4,3557 | -4,2882 |
+>
+> **Aclaración sobre qué se pronostica en h=3/h=5** (pedida explícitamente
+> por el director): el target (`log_return_fwd_h`) es el retorno
+> **acumulado** de t a t+h, no el retorno puntual del día t+h — así que el
+> objetivo correcto es la varianza del retorno acumulado a h días, no la
+> varianza del retorno de un único día futuro. El pronóstico de GARCH ya
+> respeta esto: bajo la especificación de media cero, `Var(suma de h
+> retornos) = suma de las h varianzas de un paso`, así que
+> `variance_pred_h = Σ(variance_forecast[1..h])` (`garch.py::walk_forward_evaluate_variance`).
+> El benchmark EWMA usa el mismo criterio (`variance_pred_h = h × σ²_EWMA`,
+> ver `scripts/punto8_ewma_benchmark.py`), y el proxy real contra el que se
+> evalúan ambos es `log_return_fwd_h ** 2` — el cuadrado del retorno
+> acumulado, no de un retorno puntual. Target y pronóstico miden la misma
+> cantidad en los tres horizontes.
+>
+> **Lectura del benchmark EWMA**: ninguno de los tres métodos (naive plano,
+> GARCH, EWMA) mejora sobre el naive de varianza constante — de hecho
+> **EWMA es el peor de los tres** (+1,10%/+1,38%/+2,18% vs. naive, contra
+> +0,88%/+1,03%/+1,42% de GARCH). Es un resultado informativo: EWMA no
+> tiene reversión a la media en su pronóstico (equivalente a un proceso
+> IGARCH, persistencia=1), mientras que GARCH sí la tiene
+> (α+β=0,858 < 1) — en un mercado donde la volatilidad revierte
+> relativamente rápido (vida media ~4,5 ruedas), un modelo sin reversión
+> como EWMA debería, si acaso, quedar peor que uno con reversión moderada,
+> que es exactamente lo que se observa. Ningún benchmark de volatilidad
+> probado —ni el más simple (naive plano) ni los dos que sí modelan
+> agrupamiento de volatilidad (GARCH, EWMA)— mejora sobre predecir
+> varianza constante en este dataset.
 
 **Fecha:** 5 de septiembre de 2026
 **Módulos:** `models/statistical/garch.py`, `models/statistical/garch_runner.py`
@@ -152,8 +203,19 @@ volatilidad):
   índices de mercados desarrollados, donde 0.95-0.99 (memoria de meses) es
   habitual. El RFX20 "olvida" un shock de volatilidad relativamente rápido.
 - **ν = 4.57** (grados de libertad de la t): apenas por encima del mínimo
-  (ν>4) para que exista curtosis finita — confirma colas muy pesadas,
-  consistente con la curtosis de 821 ya documentada en Etapa 1.
+  (ν>4) para que exista curtosis finita — confirma colas muy pesadas **en
+  las innovaciones estandarizadas** (los residuos del modelo, una vez
+  divididos por su desvío condicional estimado). **Corrección (4-nov-2026,
+  Punto 8 del feedback):** esto no es lo mismo que la curtosis de 821 de
+  Etapa 1, que es la curtosis **incondicional** (marginal) del retorno
+  crudo, sin condicionar en la volatilidad del momento. Son cantidades
+  relacionadas pero distintas: un proceso GARCH con innovaciones de
+  curtosis moderada ya genera, por el solo hecho del agrupamiento de
+  volatilidad (mezclar períodos de alta y baja varianza en una misma
+  serie), una curtosis incondicional **mayor** que la de sus propias
+  innovaciones — nunca menor. Que ν=4.57 confirme colas pesadas en las
+  innovaciones es consistente con, pero no equivale numéricamente a, la
+  curtosis de 821 del retorno sin condicionar.
 
 **Walk-forward (294/294 refits ok) — GARCH(1,1) t-Student vs. varianza
 constante (naive):**
@@ -185,10 +247,11 @@ a asumir volatilidad constante.
 - La persistencia moderada (0.858, vida media de ~4.5 ruedas) es un dato
   concreto a contrastar contra la literatura de mercados desarrollados al
   discutir resultados.
-- El grado de libertad bajo de la t (ν=4.57) es evidencia adicional, ya
-  anticipada por la curtosis de Etapa 1, de que cualquier modelo posterior
-  que asuma errores gaussianos (incluidos varios de ML clásico sin ajuste
-  de distribución) subestimará la probabilidad de movimientos extremos.
+- El grado de libertad bajo de la t (ν=4.57, curtosis de las innovaciones
+  estandarizadas — distinta de la curtosis incondicional de 821 de Etapa 1,
+  ver corrección arriba) es evidencia de que cualquier modelo posterior que
+  asuma errores gaussianos (incluidos varios de ML clásico sin ajuste de
+  distribución) subestimará la probabilidad de movimientos extremos.
 - La comparación Normal vs. t-Student, aunque descartada de las métricas
   finales, vale la pena citarla brevemente en la tesis como evidencia
   cuantitativa (diferencia de ~2229 puntos de AIC) de que la elección de

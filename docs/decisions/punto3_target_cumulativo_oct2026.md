@@ -144,11 +144,17 @@ código usado en esta re-corrida — ver
 
 ## Pendiente
 
-- Actualizar `docs/decisions/arima_baseline_track_a.md`, `garch_volatility_track_a.md`,
-  y el resto de los `docs/decisions/*.md` de Bloque 2 con esta tabla.
-- Actualizar `docs/tesis/proyecto_final_tibaldo.md` (Tablas 5.1/5.2 y el párrafo
-  de diagnóstico Jarque-Bera/heterocedasticidad de la sección 5.1.1) y
-  `docs/tesis/draf_proyecto_final_google_docs.md`.
+- Actualizar `docs/decisions/arima_baseline_track_a.md` y el resto de los
+  `docs/decisions/*.md` de Bloque 2 que todavía citan el target viejo
+  (`garch_volatility_track_a.md` ya corregido, ver
+  `docs/decisions/punto8_garch_evaluacion_completa_nov2026.md`).
+- Actualizar `docs/tesis/proyecto_final_tibaldo.md` Tabla 5.1 (ARIMA) con el
+  orden real (0,0,1) y las cifras del target acumulado — Tabla 5.2 (GARCH)
+  ya corregida (Punto 8). `docs/tesis/draf_proyecto_final_google_docs.md` no
+  llega todavía a estas tablas.
+- `docs/avance_trabajo_final.md` (sección 4.2.1) ya corregido en el mismo
+  pase que el Punto 8 — tabla de ARIMA/GARCH con el target acumulado,
+  orden real de ARIMA, QLIKE y EWMA.
 - Actualizar `CLAUDE.md` con el nuevo estado de Bloque 2 (hecho en esta misma
   sesión, ver sección "Punto 3" de `CLAUDE.md`).
 - Regenerar `evaluation/figures.py` (los PNG de `docs/figures/` tienen los

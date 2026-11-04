@@ -154,9 +154,15 @@ RFX20, BADLAR/TAMAR.
   **Síntesis de Track A (ARIMA/SARIMA + GARCH + SVM/RF/XGBoost/LightGBM):** seis
   métodos independientes coinciden en que la dirección del retorno diario del
   índice no es pronosticable con este feature set en los horizontes 1/3/5 días —
-  motiva explícitamente explorar Track B (Deep Learning). El resultado positivo
-  de GARCH (volatilidad condicional) es el hallazgo central de Bloque 2 hasta el
-  momento. Track A queda completo.
+  motiva explícitamente explorar Track B (Deep Learning). Track A queda completo.
+  **[Actualizado 4-nov-2026]:** la frase original acá decía que "el resultado
+  positivo de GARCH es el hallazgo central de Bloque 2" — ya no es así. Se
+  revirtió dos veces: primero por el fix de composición de sep-2019 (GARCH pasó
+  de "+39% mejor" a "~1% peor" que el naive), y después se confirmó con el
+  target acumulado del Punto 3 del feedback de los directores (GARCH sigue
+  perdiendo, ahora también en QLIKE, y pierde también contra un benchmark EWMA
+  — Punto 8). No hay un hallazgo positivo vigente en Bloque 2, ni en dirección
+  ni en volatilidad. Ver `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`.
   - **Etapa 1 (completa, 5 sep 2026):** baseline ARIMA/SARIMA. Orden ganador por
     AIC: (0,0,0), sin componente estacional — equivalente a predecir la media
     incondicional, sin estructura AR/MA explotable en el log-return diario del
@@ -204,8 +210,10 @@ RFX20, BADLAR/TAMAR.
     `models/deep_learning/cnn_lstm.py`, `tft_lite.py`, sus runners.
 
 **Síntesis de Bloque 2 completa:** nueve métodos independientes (Track A +
-Track B) coinciden en que la dirección del retorno diario no es
-pronosticable; GARCH es el único hallazgo positivo, para volatilidad. Ver
+Track B) no muestran una mejora consistente frente al naive en dirección.
+**[Actualizado 4-nov-2026]:** esta sección decía que "GARCH es el único
+hallazgo positivo, para volatilidad" — ya no es así (ver corrección más
+arriba, Track A). No queda ningún hallazgo positivo vigente en Bloque 2. Ver
 `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`.
 
 **Extensión a horizontes largos (10/21 días hábiles) — evaluada y descartada (8 sep
