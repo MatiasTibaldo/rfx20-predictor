@@ -456,6 +456,45 @@ alguna decisión después; confirmar que todos los predictores (no solo el
 spot) están disponibles en ese tramo; explicitar la asimetría de refit
 diario (ARIMA/GARCH) vs. fijo (resto) en la redacción de metodología.
 
+### Punto 5 del feedback de los directores: precauciones sobre variantes de componentes (4 nov 2026)
+
+Ver `docs/decisions/punto5_variantes_componentes_nov2026.md` para el detalle
+completo de los 4 sub-puntos.
+
+- **Variantes normalizadas (peso/retorno) preferidas sobre crudas** — ya era
+  la decisión tomada (dataset A); documentado el motivo explícito (invariancia
+  a splits/redenominaciones).
+- **El ranking no fija identidad de empresa**: verificado que 3 tickers
+  distintos (GGAL 1029 días, YPFD 735, APBR 219) ocuparon `rank01` en la
+  historia, con 85 cambios — una columna `rank01_*` representa "quien sea el
+  líder ese día", no una empresa fija. Aclaración agregada a la
+  interpretación del dataset A.
+- **Máscara de disponibilidad para esquemas por ticker (implementado y
+  probado)**: flag `{TICKER}_in_index` + relleno 0.0 solo cuando el flag ya
+  indica ausencia (missing-indicator, no imputación oculta). SVM con la
+  máscara queda empatado con las demás variantes de SVM (+0,31/+0,86/+2,81%
+  vs. naive) — funciona técnicamente, sin aporte de señal. LSTM con la
+  misma máscara es el peor resultado de toda la batería de Bloque 2
+  (+510/+274/+211%) — mismo problema de sobreajuste por alta dimensionalidad
+  que el feature set "full", no un problema de la máscara en sí.
+- **Conjunto común de predictores entre familias (implementado y probado)**:
+  los 8 modelos aplicables evaluados sobre el mismo `feature_set="full"` (24
+  predictores Track A) + dataset A. Hallazgo no anticipado: **LSTM/GRU/
+  TFT-lite colapsan con el conjunto común** (+61% a +353% vs. naive) — muy
+  por encima del naive, mientras que **CNN-LSTM es la única arquitectura de
+  DL que lo tolera** (+16% a +34%, en línea con los modelos clásicos).
+  Confirma que la brecha entre familias es un efecto de arquitectura
+  (capacidad vs. tamaño de muestra, ~1600 filas de train), no de qué
+  predictores recibió cada una — y explica por qué Track B adoptó
+  `feature_set="narrow"` como protocolo principal desde el inicio.
+
+Resultados en `results/track_a_ml_compA/`, `results/track_a_ml_compC_masked/`,
+`results/track_b_full_baseline/`, `results/track_b_full_compA/`,
+`results/track_b_full_compC_masked/` (git-ignored, regenerables desde
+`scripts/punto5_common_predictor_set.py` y `scripts/punto5_availability_mask.py`).
+No se promueven a la numeración oficial de Bloque 2 — son comparaciones de
+control. **La conclusión central no cambia.**
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido
