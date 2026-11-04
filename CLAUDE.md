@@ -524,6 +524,40 @@ semillas.
   previas a los Puntos 3/4 (target de un solo día, sin purga) quedan
   marcadas como no vigentes, no citar sus números.
 
+### Punto 7 del feedback de los directores: separar conclusiones de retorno, dirección y volatilidad (4 nov 2026)
+
+Ver `docs/decisions/punto7_separar_conclusiones_nov2026.md` para el detalle
+completo. El director objetó que un RMSE similar al naive no demuestra
+ausencia de capacidad direccional (falta su propia métrica), que los 10
+modelos comparten dataset/pipeline/protocolo (su coincidencia no descarta
+una limitación común), y un error conceptual: citar "mercados eficientes
+en su forma débil" cuando varios modelos usan variables macro públicas
+(información más amplia que precios/volúmenes pasados — forma semifuerte,
+no débil).
+
+- **Hit-rate implementado** (`scripts/punto7_hitrate.py`, sobre las
+  predicciones ya persistidas del Punto 3): de los 9 modelos de dirección ×
+  3 horizontes (27 combinaciones), **0 tienen hit-rate significativamente
+  distinto de 50%** (test binomial, p-valor mínimo 0,07 en XGBoost h=3). Ya
+  hay evidencia propia de la dimensión de dirección, no solo inferencia del
+  RMSE.
+- **Capítulo 5 corregido** (`docs/tesis/proyecto_final_tibaldo.md`, sección
+  5.4): la conclusión ahora dice explícitamente "no se encontró una mejora
+  consistente... bajo los datos, modelos, horizontes y protocolo
+  evaluados" (no "no hay señal"/"no es predecible"); se agregó la
+  subsección 5.4.1 con la tabla de hit-rate; la observación sobre
+  convergencia entre métodos se matizó (no descarta limitación común); y
+  "eficiencia débil" se corrigió a "eficiencia semifuerte".
+  `draf_proyecto_final_google_docs.md` no llega todavía al Capítulo 5 — nada
+  que corregir ahí por ahora.
+- **Cabo suelto cerrado**: `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`
+  todavía decía en su sección final "el modelo ganador del proyecto es
+  GARCH" — contradecía su propio banner (ya corregido desde sep-2026) y
+  quedó más desactualizado aún tras el Punto 3 (GARCH ahora pierde en RMSE
+  y QLIKE en los 3 horizontes, no solo "casi empata"). Corregido: no hay
+  modelo ganador en ninguna dimensión, misma cita de eficiencia corregida
+  a semifuerte.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido

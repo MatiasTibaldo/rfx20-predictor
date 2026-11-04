@@ -667,36 +667,55 @@ puede alimentar el framework de evaluación multicriterio cuando se defina su al
 Consolidando las secciones 4.2 a 4.4: de los diez métodos evaluados sobre los
 horizontes canónicos de 1, 3 y 5 días hábiles —nueve orientados a la dirección del
 retorno (ARIMA/SARIMA, SVM, Random Forest, XGBoost, LightGBM, LSTM, GRU, CNN-LSTM,
-"TFT-lite") y uno a su volatilidad condicional (GARCH)—, **ninguno mejora de forma
-consistente sobre su respectivo naive** en los tres horizontes evaluados. Las
-desviaciones puntuales observadas (XGBoost y LightGBM en h=1, del orden de +4%) se
-explican por sobreajuste leve y se reducen a un empate virtual en los horizontes más
-largos, no por una señal explotable que se pierda en el resto de los modelos. A
+"TFT-lite") y uno a su volatilidad condicional (GARCH)—, **no se encontró una mejora
+consistente frente al pronóstico de retorno cero (o de varianza constante, para
+GARCH), bajo los datos, modelos, horizontes y protocolo evaluados** (formulación
+corregida 4-nov-2026, Punto 7 del feedback de los directores — ver
+`docs/decisions/punto7_separar_conclusiones_nov2026.md`; no implica que el índice no
+sea predecible ni que no exista señal en términos absolutos). Las desviaciones
+puntuales observadas (XGBoost y LightGBM en h=1, del orden de +4%) se explican por
+sobreajuste leve y se reducen a un empate virtual en los horizontes más largos. A
 diferencia de lo que anticipaba el Plan de Trabajo Final —que un enfoque de Machine
 Learning o Deep Learning superaría a los métodos estadísticos clásicos—, el resultado
 observado es una convergencia de los tres paradigmas (estadístico, ML clásico, Deep
 Learning) hacia el mismo naive, tanto en dirección como en volatilidad.
 
 Este resultado se considera válido y defendible para la tesis, no una falla del
-proyecto, por tres razones que deben desarrollarse en la sección de resultados:
+proyecto. Dos observaciones lo contextualizan (corregidas 4-nov-2026, Punto 7 del
+feedback de los directores, con el cuidado de no extender su alcance más allá de lo
+efectivamente evaluado):
 
-1. **La consistencia entre métodos independientes es la forma más fuerte de evidencia
-   negativa disponible en Machine Learning aplicado.** Diez métodos con supuestos
-   completamente distintos —lineales y no lineales, con y sin memoria explícita de
-   secuencia, basados en árboles, en distancias, en convoluciones o en atención—
-   convergiendo en la misma conclusión descarta que se trate de una mala elección de
-   arquitectura o de hiperparámetros en un modelo puntual.
+1. **La consistencia entre métodos independientes es evidencia de que el patrón no
+   depende de un algoritmo puntual, pero no aísla la causa.** Diez métodos con
+   supuestos completamente distintos —lineales y no lineales, con y sin memoria
+   explícita de secuencia, basados en árboles, en distancias, en convoluciones o en
+   atención— convergen en la misma conclusión, lo que hace poco probable que se trate
+   de una mala elección de arquitectura o de hiperparámetros en un modelo puntual.
+   Sin embargo, los diez comparten el mismo dataset, el mismo pipeline de features y
+   el mismo protocolo de validación — esa coincidencia **no permite descartar una
+   limitación común** (del dato disponible o de alguna decisión de procesamiento
+   compartida) como explicación alternativa.
 2. **Cuando se sube la capacidad del modelo sin subir la señal disponible, el
    resultado es una degradación, no un empate** (XGBoost sin *early stopping* en
-   Track A, LSTM/GRU con el feature set completo en Track B) — evidencia adicional,
-   no solo ausencia de evidencia, de que la señal buscada no está en los datos con
-   esta granularidad.
-3. **El resultado es consistente con la hipótesis de mercados eficientes en su forma
-   débil**: en un índice líder y líquido como el RFX20 no sería sorprendente que su
-   dirección diaria no sea explicable con información pública ya rezagada (precios,
-   indicadores técnicos, variables macroeconómicas publicadas) — sería más
-   sorprendente lo contrario. El proyecto no asume esta hipótesis de antemano, pero
-   sus resultados son coherentes con ella.
+   Track A, LSTM/GRU con el feature set completo en Track B) — un patrón adicional,
+   consistente con sobreajuste sobre un conjunto de entrenamiento acotado, más que
+   con la mera ausencia de señal.
+
+Adicionalmente (Punto 7), se calculó el **hit-rate** (acierto de signo) de los nueve
+modelos de dirección — una dimensión que el RMSE, por sí solo, no mide. Resultado:
+0 de 27 combinaciones (modelo × horizonte) tienen hit-rate significativamente
+distinto de 50% (test binomial, p-valor mínimo 0,07). Esto aporta evidencia propia
+de la dimensión de dirección, independiente del RMSE. Ver
+`scripts/punto7_hitrate.py` y `docs/decisions/punto7_separar_conclusiones_nov2026.md`.
+
+Si se busca encuadrar el resultado en la literatura de eficiencia de mercados, el
+encuadre correcto es el de la **forma semifuerte**, no la débil (corregido
+4-nov-2026): la forma débil se restringe a precios y volúmenes pasados, mientras que
+varios modelos de este proyecto incorporan variables macroeconómicas públicas
+(riesgo país, tasas, tipos de cambio, futuros) — información estrictamente más
+amplia. El proyecto no asume esta hipótesis de antemano, y la presenta como una
+lectura posible del resultado, no como una conclusión que el diseño experimental
+esté en condiciones de demostrar.
 
 **Implicancia directa para la Fase 5 (Bloque 3, comparación y selección):** un
 ensamble no puede generar señal que no está presente en sus modelos de entrada —

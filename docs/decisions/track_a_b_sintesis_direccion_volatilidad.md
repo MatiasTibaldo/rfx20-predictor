@@ -52,6 +52,30 @@
 > definiciones razonables de naive — no era un artefacto de la métrica de
 > referencia. Ver `docs/decisions/garch_volatility_track_a.md` para la
 > tabla completa. No queda ninguna línea abierta de este lado.
+>
+> **Actualización 2 (4 nov 2026) — target corregido, GARCH pasa a perder
+> en los tres horizontes.** La re-corrida del Punto 3 del feedback de los
+> directores (`docs/decisions/punto3_target_cumulativo_oct2026.md`) corrige
+> `log_return_fwd_h` a retorno acumulado (antes medía el retorno de un solo
+> día en t+h) y propaga el fix a GARCH. Resultado, con el target ya
+> correcto: GARCH +0,88%/+1,03%/+1,42% peor que naive en RMSE de varianza
+> (antes +0,9%/+1,2%/+1,3% — el patrón cualitativo no cambia, pero estas son
+> las cifras vigentes) — y ahora también **pierde en QLIKE en los tres
+> horizontes** (ej. h=1: GARCH=-5,988 vs. naive=-6,043; antes no se había
+> recalculado QLIKE sobre el target corregido). **Las secciones "Evidencia:
+> volatilidad condicional" y "Qué significa para lo que sigue" más abajo
+> quedan doblemente obsoletas** — la primera ya estaba marcada como registro
+> histórico desde la Actualización 1; la segunda (que todavía decía "el
+> modelo ganador del proyecto es GARCH") se corrige directamente en el
+> cuerpo del documento, ver más abajo, porque no estaba marcada como
+> histórica y contradecía a esta misma actualización. El Punto 7 del
+> feedback (`docs/decisions/punto7_separar_conclusiones_nov2026.md`) agrega,
+> además, una métrica de hit-rate para la dimensión de dirección (0/27
+> combinaciones modelo×horizonte significativas vs. 50%) y corrige la cita a
+> "eficiencia débil" por "eficiencia semifuerte" en el Capítulo 5 de la
+> tesis — la sección 2 de este documento ("Es consistente con la hipótesis
+> de mercados eficientes en su forma débil") tiene el mismo error y se
+> corrige también más abajo.
 
 **Fecha:** 15 de septiembre de 2026 (cierre de Track B, Etapa 3)
 **Alcance:** este documento no reporta un experimento nuevo — consolida la
@@ -107,21 +131,28 @@ movimiento tiene estructura predecible, aunque su signo no.
 
 ## Por qué esto es un resultado válido, no una falla del proyecto
 
-1. **Consistencia entre métodos independientes es la forma más fuerte de
-   evidencia negativa disponible en ML aplicado.** Un solo modelo que no
-   funciona puede deberse a una mala elección de arquitectura o
-   hiperparámetros. Nueve métodos con supuestos completamente distintos
-   (lineales vs. no lineales, con y sin memoria explícita de secuencia,
-   con distintos niveles de capacidad) convergiendo en la misma conclusión
-   descarta esa explicación.
-2. **Es consistente con la hipótesis de mercados eficientes en su forma
-   débil**: en un índice líder y líquido como el RFX20, no sería
-   sorprendente que la dirección diaria no sea explicable con información
-   pública rezagada (precios, indicadores técnicos, variables
-   macroeconómicas ya publicadas) — sería más sorprendente lo contrario,
-   dado que cualquier patrón explotable con datos públicos tendería a ser
-   arbitrado. Este proyecto no *asume* esa hipótesis, pero sus resultados
-   son coherentes con ella.
+1. **Consistencia entre métodos independientes es evidencia de que el
+   patrón no depende de un algoritmo puntual, pero no aísla la causa**
+   (corregido 4-nov-2026, Punto 7 del feedback de los directores — ver
+   `docs/decisions/punto7_separar_conclusiones_nov2026.md`). Nueve métodos
+   con supuestos completamente distintos (lineales vs. no lineales, con y
+   sin memoria explícita de secuencia, con distintos niveles de capacidad)
+   convergiendo en la misma conclusión hace poco probable que se trate de
+   una mala elección de arquitectura o hiperparámetros en un modelo
+   puntual — pero los nueve comparten el mismo dataset, el mismo pipeline
+   de features y el mismo protocolo de validación, así que esa coincidencia
+   **no permite descartar una limitación común** (del dato disponible o de
+   alguna decisión de procesamiento compartida) como explicación
+   alternativa.
+2. **Si se encuadra en la literatura de eficiencia de mercados, el encuadre
+   correcto es la forma semifuerte, no la débil** (corregido 4-nov-2026,
+   mismo origen): la forma débil se restringe a precios y volúmenes
+   pasados, pero varios modelos de este proyecto incorporan variables
+   macroeconómicas públicas (riesgo país, tasas, tipos de cambio, futuros)
+   — información estrictamente más amplia. Este proyecto no *asume* esa
+   hipótesis, y la presenta como una lectura posible del resultado, no como
+   una conclusión que el diseño experimental esté en condiciones de
+   demostrar.
 3. **El hallazgo de volatilidad no es un consuelo menor.** GARCH ofrece
    valor concreto y accionable — dimensionamiento de posiciones, gestión
    de riesgo, valuación relativa de instrumentos que dependen de
@@ -131,14 +162,19 @@ movimiento tiene estructura predecible, aunque su signo no.
 
 ## Qué significa para lo que sigue (Bloque 3)
 
-- El **modelo ganador del proyecto, con la evidencia actual, es GARCH**
-  para volatilidad — no hay un modelo ganador para dirección porque la
-  evidencia indica que, con estos datos, no lo hay.
-- Un ensamble (Bloque 3) no puede inventar señal direccional que no está
-  en los inputs — combinar modelos que ya empatan con el naive no debería
-  superarlo. Sí tiene sentido evaluar ensamble/combinación **del lado de
-  volatilidad** (por ejemplo, GARCH combinado con volatilidad realizada de
-  otras ventanas) si hubiera más de un método positivo — hoy hay uno solo.
+**Corregido 4-nov-2026** — ver Actualización 2 arriba: con el target
+corregido (Punto 3), GARCH también pierde contra su naive en los tres
+horizontes (RMSE y QLIKE), así que no hay un modelo ganador en ninguna de
+las dos dimensiones del proyecto, no solo en dirección.
+
+- **No hay un modelo ganador, ni en dirección ni en volatilidad**, con la
+  evidencia actual — la formulación correcta es "no se encontró una mejora
+  consistente frente al naive respectivo, bajo los datos, modelos,
+  horizontes y protocolo evaluados" (misma formulación que el Punto 7 del
+  feedback de los directores fija para el Capítulo 5 de la tesis).
+- Un ensamble (Bloque 3) no puede inventar señal que no está en los
+  inputs — combinar modelos que ya empatan o pierden contra su naive no
+  debería superarlo, ni del lado de dirección ni del lado de volatilidad.
 - Si en el futuro se quisiera reabrir la pregunta de dirección, el camino
   no es más modelos sobre los mismos datos — es sumar información de
   naturaleza distinta a la ya usada (order flow, datos intradiarios,

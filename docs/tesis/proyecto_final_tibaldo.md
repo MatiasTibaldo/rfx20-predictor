@@ -2045,11 +2045,14 @@ encontrado ya.
 Consolidando las secciones 5.1 a 5.3: de los diez modelos evaluados sobre los
 horizontes de 1, 3 y 5 días hábiles —nueve orientados a la dirección del retorno
 (ARIMA/SARIMA, SVM, Random Forest, XGBoost, LightGBM, LSTM, GRU, CNN-LSTM, TFT-lite)
-y uno a su volatilidad condicional (GARCH)—, **ninguno mejora de forma consistente
-sobre su respectivo naive** en los tres horizontes evaluados (Tabla 5.7). Las
-desviaciones puntuales más notorias (XGBoost y LightGBM en $h=1$, Tabla 5.3) se
-explican por sobreajuste leve y se reducen a un empate virtual en los horizontes más
-largos, no por una señal explotable que se pierda en el resto de los modelos.
+y uno a su volatilidad condicional (GARCH)—, **no se encontró una mejora consistente
+frente al pronóstico de retorno cero, bajo los datos, modelos, horizontes y
+protocolo evaluados** (Tabla 5.7). Las desviaciones puntuales más notorias (XGBoost
+y LightGBM en $h=1$, Tabla 5.3) se explican por sobreajuste leve y se reducen a un
+empate virtual en los horizontes más largos. Esta formulación es deliberadamente
+acotada: un RMSE en línea con el naive no permite, por sí solo, afirmar que el
+índice no es predecible ni que no existe señal en los datos — solo que, bajo este
+protocolo específico, ningún modelo la explotó mejor que predecir cero.
 
 **Tabla 5.7.** Síntesis: variación de RMSE vs. naive por modelo y horizonte (celda
 en blanco donde no aplica).
@@ -2070,25 +2073,78 @@ en blanco donde no aplica).
 *(Ver `docs/figures/rmse_comparison.png` para la versión gráfica de esta tabla, con
 un panel por horizonte.)*
 
-Tres observaciones sostienen que este resultado es válido y debe presentarse como
-hallazgo académico legítimo, no como una falla del proyecto:
+#### 5.4.1. Dimensión de dirección: hit-rate
 
-1. **La consistencia entre métodos independientes es la forma más fuerte de
-   evidencia negativa disponible en Machine Learning aplicado.** Diez métodos con
-   supuestos completamente distintos —lineales y no lineales, con y sin memoria
-   explícita de secuencia, basados en árboles, en distancias, en convoluciones o en
-   atención— convergiendo en la misma conclusión descarta que se trate de una mala
-   elección de arquitectura o de hiperparámetros en un modelo puntual.
+La Tabla 5.7 mide magnitud del error (RMSE/MAE), no si el signo pronosticado
+coincide con el real — un RMSE en línea con el naive no demuestra, por sí solo,
+ausencia de capacidad para anticipar la dirección del retorno. Para evaluar esa
+dimensión específicamente, se calculó el hit-rate (porcentaje de días en los que
+`sign(predicción) = sign(retorno real)`) de los nueve modelos orientados a
+dirección, con un test binomial de dos colas contra la hipótesis nula de 50% de
+aciertos, sobre las mismas predicciones de validación de la Tabla 5.7 (n=294 por
+celda).
+
+**Tabla 5.8.** Hit-rate y significancia (test binomial vs. 50%), conjunto de
+validación.
+
+| Modelo | $h=1$ | $h=3$ | $h=5$ |
+|---|---:|---:|---:|
+| ARIMA/SARIMA | 49,3% (p=0,86) | 50,7% (p=0,86) | 52,4% (p=0,45) |
+| SVM | 49,0% (p=0,77) | 47,3% (p=0,38) | 47,3% (p=0,38) |
+| Random Forest | 54,1% (p=0,18) | 50,0% (p=1,00) | 52,0% (p=0,52) |
+| XGBoost | 53,4% (p=0,27) | 55,4% (p=0,07) | 46,3% (p=0,22) |
+| LightGBM | 54,4% (p=0,14) | 51,7% (p=0,60) | 51,4% (p=0,68) |
+| LSTM | 52,7% (p=0,38) | 51,4% (p=0,68) | 48,0% (p=0,52) |
+| GRU | 52,0% (p=0,52) | 46,3% (p=0,22) | 47,3% (p=0,38) |
+| CNN-LSTM | 49,3% (p=0,86) | 46,6% (p=0,27) | 46,6% (p=0,27) |
+| TFT-lite | 48,6% (p=0,68) | 47,6% (p=0,45) | 51,4% (p=0,68) |
+
+**Ninguna de las 27 combinaciones (modelo × horizonte) alcanza significancia
+convencional** ($p<0{,}05$); el valor más bajo (XGBoost, $h=3$, $p=0{,}07$) tampoco la
+alcanza, y con 27 pruebas sin corrección por comparaciones múltiples sería
+esperable encontrar 1-2 falsos positivos por azar si la verdadera tasa de acierto
+fuera 50% — no se encontró ninguno. Esto aporta evidencia propia de la dimensión
+de dirección, independiente del RMSE: bajo el protocolo evaluado, tampoco se
+detectó capacidad de anticipar el signo del retorno por encima del azar.
+
+Esta conclusión tampoco se extiende, sin más, a la volatilidad: la ausencia de
+autocorrelación lineal en el retorno (ARIMA, sección 5.1) y la ausencia de hit-rate
+direccional no implican nada sobre la varianza condicional, que es una pregunta
+distinta y se trata por separado (GARCH, Tabla 5.7, fila "volatilidad") — ni sobre
+dependencias no lineales que un test de hit-rate agregado, igual que el RMSE, no
+está diseñado para detectar de forma aislada por sí solo.
+
+#### 5.4.2. Lectura del resultado
+
+Dos observaciones contextualizan este resultado, con el cuidado de no extender su
+alcance más allá de lo efectivamente evaluado:
+
+1. **La consistencia entre métodos independientes es evidencia de que el patrón no
+   depende de un algoritmo puntual, pero no aísla la causa.** Diez métodos con
+   supuestos distintos —lineales y no lineales, con y sin memoria explícita de
+   secuencia, basados en árboles, en distancias, en convoluciones o en atención—
+   convergen en el mismo resultado, lo que hace poco probable que se trate de una
+   mala elección de arquitectura o de hiperparámetros en un modelo específico. Sin
+   embargo, los diez comparten el mismo dataset, el mismo pipeline de construcción
+   de features y el mismo protocolo de validación — esa coincidencia **no permite
+   descartar una limitación común** (del dato disponible o de alguna decisión de
+   procesamiento compartida) como explicación alternativa a "no hay señal
+   explotable en el fenómeno".
 2. **Cuando se sube la capacidad del modelo sin subir la señal disponible, el
    resultado es una degradación, no un empate** (XGBoost/LightGBM en $h=1$, Tabla
-   5.3; LSTM/GRU con el feature set completo, Tabla 5.5) — evidencia adicional, no
-   solo ausencia de evidencia, de que la señal buscada no está en los datos con esta
-   granularidad.
-3. **El resultado es consistente con la hipótesis de mercados eficientes en su forma
-   débil**: en un índice líder y líquido como el RFX20 no sería sorprendente que su
-   dirección diaria no sea explicable con información pública ya rezagada (precios,
-   indicadores técnicos, variables macroeconómicas publicadas) — sería más
-   sorprendente lo contrario.
+   5.3; LSTM/GRU con el feature set completo, Tabla 5.5) — un patrón adicional,
+   consistente con sobreajuste sobre un conjunto de entrenamiento acotado (~1.600
+   filas), más que con la mera ausencia de señal.
+
+Si se busca encuadrar el resultado en la literatura de eficiencia de mercados, el
+encuadre correcto es el de la **forma semifuerte** de la hipótesis, no la débil: la
+forma débil se restringe a la información contenida en precios y volúmenes
+pasados, mientras que varios de los modelos evaluados incorporan variables
+macroeconómicas públicas (riesgo país, tasas, tipos de cambio, futuros) — un
+conjunto de información estrictamente más amplio. Incluso bajo ese encuadre más
+exigente, esto se presenta como una lectura posible del resultado, no como una
+conclusión que el diseño experimental de este trabajo esté en condiciones de
+demostrar.
 
 **Implicancia para la Fase 5 del proyecto (comparación y selección de modelo
 final):** un ensamble no puede generar señal que no está presente en sus modelos de
