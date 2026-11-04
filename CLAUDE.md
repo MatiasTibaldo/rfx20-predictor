@@ -495,6 +495,35 @@ Resultados en `results/track_a_ml_compA/`, `results/track_a_ml_compC_masked/`,
 No se promueven a la numeración oficial de Bloque 2 — son comparaciones de
 control. **La conclusión central no cambia.**
 
+### Punto 6 del feedback de los directores: diagnóstico de redes antes de atribuir a sobreajuste (4 nov 2026)
+
+Ver `docs/decisions/punto6_diagnostico_redes_nov2026.md` para el detalle
+completo. El director pidió auditar las degradaciones de DL (Punto 5, ítems
+3/4) antes de asumir sobreajuste: revisar escalado del objetivo, alineación
+ventana-etiqueta, media/dispersión de predicciones, y repetir con varias
+semillas.
+
+- **Sin escalado del objetivo** (solo las features se escalan) — sin riesgo
+  de bug de inversa.
+- **Alineación ventana-etiqueta correcta** — confirmado en código.
+- **Media/dispersión de predicciones**: sesgo sistemático grande (20-70x la
+  media real) en las configuraciones degradadas, no ruido ni salida
+  degenerada — evidencia concreta de sobreajuste, no solo inferencia del
+  RMSE.
+- **Estabilidad entre semillas** (`scripts/punto6_dl_diagnostics.py`, 3
+  configs × 3 semillas): LSTM-máscara muy estable en su mal resultado
+  (CV=0,8%) — confirma limitación estructural, no mala suerte de una
+  semilla. GRU más variable (CV=12,5%) pero ninguna semilla da resultado
+  aceptable.
+- **Curvas de pérdida persistidas** por primera vez (antes se calculaban y
+  descartaban) — muestran sobreajuste temprano (mejor epoch en los primeros
+  2-5 de ~20) en las configuraciones degradadas.
+- **Tabla de experimentos**: el empate narrow (Track B oficial) y la
+  degradación full/composición no son una inconsistencia — son dos
+  datasets/feature-sets distintos, ambos vigentes. Las exploraciones
+  previas a los Puntos 3/4 (target de un solo día, sin purga) quedan
+  marcadas como no vigentes, no citar sus números.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido
