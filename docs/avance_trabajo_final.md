@@ -403,35 +403,62 @@ sobre la misma serie. Ver `docs/decisions/arima_baseline_track_a.md`.
 **GARCH.** Dado que ARIMA no encontró estructura en la media condicional, se ajustó
 un GARCH de media cero directamente sobre `log_return`. Una comparación experimental
 por AIC entre innovaciones Normales y t-Student (9 candidatos cada una) resultó
-contundente a favor de t-Student (AIC 8029,78 vs. 10258,68), consistente con la
-curtosis extrema ya observada — la distribución Normal se descartó de las corridas
-siguientes. El orden ganador fue **GARCH(1,1)** con distribución t-Student:
-`ω=1,2254`, `α=0,1235`, `β=0,7343`, `ν=4,57`. La persistencia (`α+β=0,858`) implica
-una vida media de shocks de volatilidad de aproximadamente 4,5 ruedas —moderada
-frente a los valores de 0,95-0,99 habituales en índices de mercados desarrollados—,
-y el grado de libertad bajo de la t confirma colas muy pesadas. Se evaluó contra el
-retorno al cuadrado (proxy estándar de varianza realizada cuando no se dispone de
-datos intradiarios), con RMSE y QLIKE (Patton, 2011) como métricas, y un naive de
-referencia de varianza constante (varianza incondicional de train). Ver
-`docs/decisions/garch_volatility_track_a.md`.
+contundente a favor de t-Student (AIC 8029,78 vs. 10258,68) — la distribución Normal
+se descartó de las corridas siguientes. El orden ganador fue **GARCH(1,1)** con
+distribución t-Student: `ω=1,2254`, `α=0,1235`, `β=0,7343`, `ν=4,57`. La
+persistencia (`α+β=0,858`) implica una vida media de shocks de volatilidad de
+aproximadamente 4,5 ruedas —moderada frente a los valores de 0,95-0,99 habituales en
+índices de mercados desarrollados—, y el grado de libertad bajo de la t confirma
+colas pesadas **en las innovaciones estandarizadas** del modelo — una cantidad
+relacionada con, pero distinta de, la curtosis incondicional de 821 del retorno
+crudo reportada arriba: un proceso GARCH genera, por el solo efecto del agrupamiento
+de volatilidad, una curtosis incondicional mayor que la de sus propias innovaciones,
+nunca menor. Se evaluó contra el retorno al cuadrado (proxy estándar de varianza
+realizada cuando no se dispone de datos intradiarios), con RMSE y QLIKE (Patton,
+2011) como métricas, y un naive de referencia de varianza constante (varianza
+incondicional de train). Ver `docs/decisions/garch_volatility_track_a.md`.
 
-**Resultado (val, walk-forward diario, sobre el dataset ya corregido según 4.1):**
+**Nota (4 nov 2026 — Punto 3 del feedback de los directores):** la tabla original de
+esta sección medía `log_return_fwd_h` como el retorno de un único día en t+h en vez
+del retorno **acumulado** de t a t+h que describe la metodología (sección 3.2.2) —
+confirmado en código y corregido (`docs/decisions/punto3_target_cumulativo_oct2026.md`).
+La tabla de abajo ya refleja el target correcto: para GARCH, el objetivo en h=3/h=5
+es la varianza del retorno acumulado a h días (`Var(suma de h retornos) = suma de
+las h varianzas de un paso`), evaluado contra `log_return_fwd_h ** 2`. Se agrega
+además QLIKE (ya anunciado en esta sección pero no mostrado hasta ahora) y un
+benchmark adicional de volatilidad móvil (EWMA, λ=0,94,
+`scripts/punto8_ewma_benchmark.py`) — ver
+`docs/decisions/punto8_garch_evaluacion_completa_nov2026.md`.
 
-| Modelo | Horizonte | RMSE | RMSE naive | Var. vs. naive |
-|---|---|---:|---:|---:|
-| ARIMA/SARIMA | 1 | 0,029536 | 0,029553 | -0,1% |
-| ARIMA/SARIMA | 3 | 0,029531 | 0,029531 | 0,0% |
-| ARIMA/SARIMA | 5 | 0,029479 | 0,029479 | 0,0% |
-| GARCH (varianza) | 1 | 0,0027724 | 0,0027481 | +0,9% |
-| GARCH (varianza) | 3 | 0,0027799 | 0,0027484 | +1,2% |
-| GARCH (varianza) | 5 | 0,0027849 | 0,0027487 | +1,3% |
+**Resultado vigente (val, walk-forward diario, target acumulado, sobre el dataset ya
+corregido según 4.1):**
 
-Ninguno de los dos modelos estadísticos supera a su naive respectivo. Se verificó
+| Modelo | Horizonte | RMSE | RMSE naive | Var. vs. naive | QLIKE |
+|---|---|---:|---:|---:|---:|
+| ARIMA/SARIMA (orden real (0,0,1), no (0,0,0)) | 1 | 0,029536 | 0,029553 | -0,06% | — |
+| ARIMA/SARIMA | 3 | 0,052451 | 0,052421 | +0,06% | — |
+| ARIMA/SARIMA | 5 | 0,068479 | 0,068560 | -0,12% | — |
+| GARCH (varianza) | 1 | 0,0027724 | 0,0027481 | +0,88% | -5,988 (naive: -6,043) |
+| GARCH (varianza) | 3 | 0,0077450 | 0,0076656 | +1,03% | -4,794 (naive: -4,895) |
+| GARCH (varianza) | 5 | 0,0134430 | 0,0132549 | +1,42% | -4,224 (naive: -4,356) |
+| EWMA (λ=0,94, benchmark) | 1 | 0,0027784 | 0,0027481 | +1,10% | -6,011 |
+| EWMA (λ=0,94, benchmark) | 3 | 0,0077714 | 0,0076656 | +1,38% | -4,844 |
+| EWMA (λ=0,94, benchmark) | 5 | 0,0135442 | 0,0132549 | +2,18% | -4,288 |
+
+Ninguno de los tres métodos de volatilidad (naive, GARCH, EWMA) mejora sobre los
+otros dos en ambas métricas — EWMA, que no tiene reversión a la media en su
+pronóstico, queda peor que GARCH, que sí la tiene (α+β=0,858), consistente con un
+mercado donde la volatilidad revierte relativamente rápido. Se verificó
 adicionalmente que la comparación de GARCH no depende de una definición
 particularmente injusta del naive: un naive alternativo con la varianza calculada
 sobre train winsorizado (recorte 1%/99%, para reducir la sensibilidad a outliers)
 resulta igual o levemente peor que el naive crudo, y GARCH sigue sin superar a
-ninguno de los dos — la comparación es robusta a esta variante metodológica.
+ninguno de los dos. **Esto no se debe a que la varianza de train minimice "por
+construcción" el error fuera de muestra** — esa garantía solo existe dentro de la
+propia muestra de entrenamiento; que el naive también sea competitivo sobre `val`
+es una observación empírica de este dataset, no una propiedad matemática
+garantizada. La comparación es, de todos modos, robusta a esta variante
+metodológica.
 
 #### 4.2.2 Machine Learning clásico: SVM, Random Forest, XGBoost, LightGBM
 
