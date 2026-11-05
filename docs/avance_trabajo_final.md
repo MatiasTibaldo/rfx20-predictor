@@ -717,15 +717,24 @@ amplia. El proyecto no asume esta hipótesis de antemano, y la presenta como una
 lectura posible del resultado, no como una conclusión que el diseño experimental
 esté en condiciones de demostrar.
 
-**Implicancia directa para la Fase 5 (Bloque 3, comparación y selección):** un
-ensamble no puede generar señal que no está presente en sus modelos de entrada —
-combinar diez modelos que ya empatan con su naive no debería superarlo, ni del lado
-de dirección ni del lado de volatilidad. Esto cambia sustancialmente el alcance
-esperable de la Fase 5 respecto de lo previsto en el Plan de Trabajo Final (que
-preveía desarrollo de ensamble y selección de un modelo ganador), y debe discutirse
-explícitamente con la dirección antes de iniciar el desarrollo de esa fase (ver
-sección 7, punto 8). Ver `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md`
-para el detalle completo de esta síntesis.
+**Implicancia directa para la Fase 5 (Bloque 3, comparación y selección):**
+**corregido (4-nov-2026, Punto 10 del feedback de los directores)** — esta
+sección afirmaba que "un ensamble no puede generar señal que no está presente
+en sus modelos de entrada", como imposibilidad teórica. No es correcto: una
+combinación de modelos puede reducir el error de pronóstico aunque ninguno de
+sus integrantes supere individualmente al naive, si sus errores no están
+perfectamente correlacionados entre sí. El encuadre correcto es de **alcance y
+costo**: desarrollar y validar un ensamble sobre los nueve modelos de
+dirección es trabajo no trivial, con retorno esperado incierto dado que
+ninguno individualmente supera al naive de forma significativa (Punto 9 del
+feedback, intervalos de confianza por bootstrap de bloques). Esto sigue
+cambiando el alcance esperable de la Fase 5 respecto de lo previsto en el Plan
+de Trabajo Final (que preveía desarrollo de ensamble y selección de un modelo
+ganador), y debe discutirse explícitamente con la dirección antes de iniciar
+el desarrollo de esa fase (ver sección 7, punto 8) — pero como decisión de
+priorización, no como conclusión forzada por los resultados. Ver
+`docs/decisions/track_a_b_sintesis_direccion_volatilidad.md` para el detalle
+completo de esta síntesis.
 
 ## 5. Implicancias metodológicas para la tesis
 

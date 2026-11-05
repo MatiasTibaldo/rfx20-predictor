@@ -41,8 +41,14 @@ Se reinterpreta la feature "volatilidad implícita" del plan como:
    fondeo en pesos esperado por el mercado.
 2. **Term spread de la curva de futuros** — diferencia entre el `impliedRate`
    (o el precio de cierre) del contrato front-month y el del siguiente
-   vencimiento disponible el mismo día. Proxy de expectativas de
-   devaluación/inflación a distintos plazos.
+   vencimiento disponible el mismo día. Refleja la forma de la curva de
+   financiamiento implícita en los futuros del índice. **Corrección
+   (4-nov-2026, Punto 10 del feedback de los directores):** leerlo
+   directamente como "expectativas de devaluación/inflación" requiere un
+   supuesto adicional no verificado en este proyecto (que el diferencial de
+   tasas esté dominado por la paridad de tasas de interés no cubierta
+   peso/dólar) — se documenta como proxy de condiciones de financiamiento,
+   no como medición directa de expectativas macroeconómicas.
 
 Esta reinterpretación se documenta ahora para no perder el contexto de la
 decisión, aunque la implementación (script de ingesta paginado + feature de

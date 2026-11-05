@@ -1280,7 +1280,7 @@ predicción de movimientos de los principales índices bursátiles, y Pimentel R
 (2024), en un trabajo de tesis de maestría de la Universidad de Chile, aplica
 modelos recurrentes y convolucionales con mecanismos de atención a índices
 bursátiles extranjeros —un antecedente metodológicamente cercano a la arquitectura
-"TFT-lite" evaluada en este trabajo (sección 3.4.6)—.
+"Transformer encoder" evaluada en este trabajo (sección 3.4.6)—.
 
 Finalmente, cabe destacar como antecedente directo el trabajo de Drago (2023),
 desarrollado en el marco de la misma Maestría en Explotación de Datos y Gestión del
@@ -1297,6 +1297,45 @@ trata de un producto y un mercado distintos a los de este trabajo, la coincidenc
 en el patrón metodológico (fracaso de los modelos estadísticos clásicos frente a una
 serie de comportamiento cercano al ruido blanco) constituye un punto de comparación
 directo y valioso al discutir los resultados obtenidos para el RFX20.
+
+**Tabla 3.1.** Síntesis comparativa de los antecedentes citados — variable objetivo,
+comparación de modelos y validación (agregada 4-nov-2026, Punto 10 del feedback de
+los directores). Las celdas marcadas "no especificado" reflejan el nivel de detalle
+disponible en la cita tal como se la describe en este trabajo, no una verificación
+directa contra la fuente original — distinguir trabajos que predicen **nivel** de
+precio de los que predicen **retorno** es precisamente el punto que señala el
+director, y no siempre es inferible solo de la descripción narrativa ya incluida más
+arriba.
+
+| Estudio | Activo / mercado | Variable objetivo | Familias comparadas | Validación |
+|---|---|---|---|---|
+| Bhandari et al. (2022) | S&P 500 | No especificado en este trabajo | LSTM vs. métodos estadísticos clásicos | No especificado en este trabajo |
+| Yavasani y Wang (2023) | Precios de mercado (no especificado cuál) | **Nivel** (el texto dice "precios de mercado", no retornos) | LSTM, GRU, ARIMA | No especificado en este trabajo |
+| Mohapatra et al. (2025) | Acciones bancarias | No especificado en este trabajo | Ensamble, con foco en ingeniería de features vs. arquitectura | No especificado en este trabajo |
+| Nasir et al. (2025) | NASDAQ Composite | No especificado en este trabajo | Híbrido (descomposición + estadístico + ML) vs. Deep Learning puro | No especificado en este trabajo |
+| Gülmez (2023) | No especifica un mercado puntual (foco metodológico) | No aplica — foco en optimización de hiperparámetros de LSTM | LSTM (metaheurísticas de ajuste) | No especificado en este trabajo |
+| Ruiz Solivella (2025) | Índices bursátiles argentinos | **Retorno/dirección** (el texto dice "movimientos", no niveles) | Random Forest | No especificado en este trabajo |
+| Pimentel Ramírez (2024) | Índices bursátiles extranjeros | No especificado en este trabajo | Recurrentes y convolucionales con atención | No especificado en este trabajo |
+| Drago (2023) | Estireno (commodity petroquímico) | **Nivel** (el texto dice "el precio del Estireno") | ARIMA, GARCH, LightGBM, LSTM | No especificado en este trabajo |
+
+Mastrangelo y Salvatierra (2022), Edwards, Biscarri y de Gracia (2003) y Assaf et al.
+(2025) se citan arriba como contexto de mercado (desempeño de fondos, caracterización
+de volatilidad en mercados emergentes), no como estudios de predicción algorítmica
+comparables en estructura a los de la tabla — se excluyen de ella por ese motivo, no
+por omisión.
+
+De los ocho estudios de predicción listados, solo tres permiten clasificar la
+variable objetivo con la información ya incluida en este trabajo: dos predicen
+**nivel** de precio (Yavasani y Wang 2023; Drago 2023) y uno predice **retorno o
+dirección** (Ruiz Solivella 2025) — exactamente la distinción que señala el
+director como relevante, y que en los cinco casos restantes no puede resolverse sin
+consultar la fuente original (pendiente, no se afirma un valor sin poder
+verificarlo). Es, en cualquier caso, una distinción metodológicamente central: un
+estudio que reporta buen desempeño prediciendo el **nivel** de un precio (una serie
+con tendencia, altamente autocorrelacionada) no es directamente comparable con este
+trabajo, que predice **retornos** (una serie mucho más cercana a ruido blanco por
+construcción) — la dificultad relativa de ambos problemas no es la misma, y
+conflacionarlos sobreestimaría qué tan "fácil" debería ser el problema abordado acá.
 
 ---
 
@@ -1524,8 +1563,18 @@ features en reemplazo de la volatilidad implícita prevista originalmente: la **
 implícita** del contrato de vencimiento más próximo (*front-month*, determinado
 directamente de los datos disponibles cada día, sin mantener un calendario de
 vencimientos separado) y el **term spread** entre esa tasa y la del siguiente
-contrato disponible el mismo día, interpretable como una lectura de expectativas de
-devaluación e inflación a distintos plazos. Ambos features son nulos antes de la
+contrato disponible el mismo día. **Corrección (4-nov-2026, Punto 10 del
+feedback de los directores):** la lectura original de estos dos features como
+"expectativas de devaluación e inflación" se reformula — ambos reflejan, en
+primer término, **condiciones de financiamiento** (la tasa implícita surge del
+arbitraje spot-futuro, análoga a un costo de *carry*) y la forma de la curva de
+futuros del índice, no una medición directa de expectativas macroeconómicas.
+Leerlos como proxy de devaluación/inflación requeriría asumir adicionalmente
+que esas condiciones de financiamiento están dominadas por el diferencial de
+tasas entre pesos y dólares (paridad de tasas de interés no cubierta) — un
+supuesto razonable en el contexto argentino, pero que no se verifica de forma
+independiente en este trabajo, y que por lo tanto no se afirma como hecho
+dado. Ambos features son nulos antes de la
 primera fecha con datos de futuros disponibles en la fuente (2 de enero de 2020) —el
 tratamiento de este y otros gaps estructurales se desarrolla en la sección 4.3.3.
 
@@ -1553,7 +1602,7 @@ y term spread de futuros, TAMAR, spreads del dólar MEP) por familia de modelo.
 |---|---|---|
 | Random Forest, XGBoost, LightGBM (sección 3.3) | Sí | Reciben las columnas con sus nulos reales, sin imputar |
 | SVM (sección 3.3.2) | No | Se excluyen esas columnas específicamente de su feature set |
-| LSTM, GRU, CNN-LSTM, TFT-lite (sección 3.4) | No | Mismo criterio que SVM: exclusión, no imputación |
+| LSTM, GRU, CNN-LSTM, Transformer encoder (sección 3.4) | No | Mismo criterio que SVM: exclusión, no imputación |
 | ARIMA/SARIMA, GARCH (sección 3.2) | — | No aplica: son modelos univariados sobre la propia serie del índice |
 
 Adicionalmente, se incorporó una columna binaria de disponibilidad (1 si las
@@ -1661,7 +1710,7 @@ decisión de diseño que se retoma en detalle, familia por familia, en la secci�
 |---|---|---|
 | Estadística (ARIMA/SARIMA, GARCH) | Walk-forward (sección 3.5.3): orden fijado una única vez por AIC sobre train, coeficientes reestimados en cada paso | Serie completa de pronósticos "en producción simulada", evaluada directamente |
 | Machine Learning (SVM, RF, XGBoost, LightGBM) | Validación cruzada expansiva sobre train (sección 3.5.2) para elegir hiperparámetros | No participa de la búsqueda; una única evaluación del modelo ya elegido |
-| Deep Learning (LSTM, GRU, CNN-LSTM, TFT-lite) | *Early stopping* sobre una porción reservada del final de train (sección 4.5.3) para elegir el *lookback* y detener el entrenamiento | No participa de ninguna decisión de diseño; una única evaluación del modelo ya entrenado |
+| Deep Learning (LSTM, GRU, CNN-LSTM, Transformer encoder) | *Early stopping* sobre una porción reservada del final de train (sección 4.5.3) para elegir el *lookback* y detener el entrenamiento | No participa de ninguna decisión de diseño; una única evaluación del modelo ya entrenado |
 
 En los tres casos, el conjunto de prueba (sección 4.4.2) no se utiliza en ninguna
 etapa de desarrollo de este trabajo —queda reservado para la evaluación final del
@@ -1743,7 +1792,7 @@ explícito de que los resultados fueran robustos, replicables y fáciles de expl
   permite comparar qué variables pesan más en cada familia bajo el mismo criterio,
   incluso para SVM, que no expone una medida de importancia nativa.
 
-#### 4.5.3. Modelos de Deep Learning: LSTM, GRU, CNN-LSTM y TFT-lite
+#### 4.5.3. Modelos de Deep Learning: LSTM, GRU, CNN-LSTM y Transformer encoder
 
 Las cuatro arquitecturas de esta sección comparten un protocolo común, deliberadamente
 distinto en varios aspectos del de la sección 4.5.2:
@@ -1784,17 +1833,25 @@ manteniendo el resto del protocolo idéntico para asegurar comparabilidad: **LST
 (sección 3.4.3) de una capa, sin atención ni bidireccionalidad; **GRU** (sección
 3.4.4), bajo el mismo protocolo exacto, para aislar el efecto de la elección de
 celda recurrente; el híbrido **CNN-LSTM** (sección 3.4.5), con una capa
-convolucional unidimensional seguida de una LSTM; y **TFT-lite** (sección 3.4.6),
-una arquitectura basada en atención deliberadamente acotada frente a un Temporal
-Fusion Transformer completo —proyección lineal de los features de entrada,
-encoding posicional sinusoidal, una capa `TransformerEncoderLayer` de atención
-multi-cabeza y una cabeza lineal de salida—, dado que los componentes adicionales
-del TFT completo (redes de selección de variables, *gating*, encoder de covariables
-estáticas) están diseñados para escenarios con múltiples series y entidades que no
-aplican al presente trabajo: una única serie, sin covariables estáticas, sobre un
-conjunto de entrenamiento de tamaño moderado (sección 4.2.1). Esta decisión de
-alcance se declara explícitamente para que la denominación "TFT-lite" no sugiera una
-reproducción del modelo original de Lim et al. (2019/2021).
+convolucional unidimensional seguida de una LSTM; y el **Transformer encoder**
+(sección 3.4.6) —proyección lineal de los features de entrada, encoding
+posicional sinusoidal, una capa `TransformerEncoderLayer` de atención
+multi-cabeza y una cabeza lineal de salida—, una arquitectura basada en
+atención deliberadamente acotada frente a un Temporal Fusion Transformer (TFT)
+completo, ya que los componentes adicionales del TFT (redes de selección de
+variables, *gating*, encoder de covariables estáticas) están diseñados para
+escenarios con múltiples series y entidades que no aplican al presente trabajo:
+una única serie, sin covariables estáticas, sobre un conjunto de entrenamiento
+de tamaño moderado (sección 4.2.1). **Nota de nomenclatura (corregida
+4-nov-2026, Punto 10 del feedback de los directores):** esta arquitectura se
+llamaba "TFT-lite" en versiones anteriores de este trabajo — nombre que se
+reemplaza por **Transformer encoder** en toda la redacción, porque se omiten
+varios componentes centrales del TFT y mantener su nombre en el título sugería
+una reproducción del modelo original de Lim et al. (2019/2021) que no es tal.
+Los identificadores de código (`tft_lite.py`, `tft_lite_runner.py`, clase
+`TFTLiteRegressor`, archivos de resultados `tft_lite_val_predictions_*`) se
+mantienen sin cambios, por trazabilidad con los experimentos ya ejecutados y
+documentados bajo ese nombre.
 
 ---
 
@@ -2020,9 +2077,9 @@ fenómeno observado con XGBoost en la Tabla 5.3, pero más pronunciado. El featu
 acotado de la Tabla 5.4 queda confirmado como la opción correcta para esta cantidad
 de datos disponible.
 
-#### 5.3.3. Arquitecturas híbridas y basadas en atención: CNN-LSTM y TFT-lite
+#### 5.3.3. Arquitecturas híbridas y basadas en atención: CNN-LSTM y Transformer encoder
 
-**Tabla 5.6.** CNN-LSTM y TFT-lite (feature set acotado) vs. naive, conjunto de
+**Tabla 5.6.** CNN-LSTM y Transformer encoder (feature set acotado) vs. naive, conjunto de
 validación.
 
 | Modelo | Horizonte | RMSE | RMSE naive | Variación vs. naive |
@@ -2030,13 +2087,13 @@ validación.
 | CNN-LSTM | 1 | 0,030018 | 0,029553 | +1,6% |
 | CNN-LSTM | 3 | 0,030362 | 0,029531 | +2,8% |
 | CNN-LSTM | 5 | 0,029818 | 0,029479 | +1,2% |
-| TFT-lite | 1 | 0,030330 | 0,029553 | +2,6% |
-| TFT-lite | 3 | 0,030529 | 0,029531 | +3,4% |
-| TFT-lite | 5 | 0,030524 | 0,029479 | +3,5% |
+| Transformer encoder | 1 | 0,030330 | 0,029553 | +2,6% |
+| Transformer encoder | 3 | 0,030529 | 0,029531 | +3,4% |
+| Transformer encoder | 5 | 0,030524 | 0,029479 | +3,5% |
 
 Ambas arquitecturas completan el mismo patrón que LSTM y GRU: ninguna mejora sobre
 el naive con el feature set acotado. Ni la incorporación de un componente
-convolucional (CNN-LSTM) ni la de un mecanismo de atención (TFT-lite, sección 3.4.6)
+convolucional (CNN-LSTM) ni la de un mecanismo de atención (Transformer encoder, sección 3.4.6)
 encuentran estructura adicional que las arquitecturas puramente recurrentes no hayan
 encontrado ya.
 
@@ -2044,7 +2101,7 @@ encontrado ya.
 
 Consolidando las secciones 5.1 a 5.3: de los diez modelos evaluados sobre los
 horizontes de 1, 3 y 5 días hábiles —nueve orientados a la dirección del retorno
-(ARIMA/SARIMA, SVM, Random Forest, XGBoost, LightGBM, LSTM, GRU, CNN-LSTM, TFT-lite)
+(ARIMA/SARIMA, SVM, Random Forest, XGBoost, LightGBM, LSTM, GRU, CNN-LSTM, Transformer encoder)
 y uno a su volatilidad condicional (GARCH)—, **no se encontró una mejora consistente
 frente al pronóstico de retorno cero, bajo los datos, modelos, horizontes y
 protocolo evaluados** (Tabla 5.7). Las desviaciones puntuales más notorias (XGBoost
@@ -2068,7 +2125,7 @@ en blanco donde no aplica).
 | LSTM | Deep Learning | +0,8% | +0,6% | +1,4% |
 | GRU | Deep Learning | +6,4% | +2,3% | +2,5% |
 | CNN-LSTM | Deep Learning | +1,6% | +2,8% | +1,2% |
-| TFT-lite | Deep Learning | +2,6% | +3,4% | +3,5% |
+| Transformer encoder | Deep Learning | +2,6% | +3,4% | +3,5% |
 
 *(Ver `docs/figures/rmse_comparison.png` para la versión gráfica de esta tabla, con
 un panel por horizonte.)*
@@ -2097,7 +2154,7 @@ validación.
 | LSTM | 52,7% (p=0,38) | 51,4% (p=0,68) | 48,0% (p=0,52) |
 | GRU | 52,0% (p=0,52) | 46,3% (p=0,22) | 47,3% (p=0,38) |
 | CNN-LSTM | 49,3% (p=0,86) | 46,6% (p=0,27) | 46,6% (p=0,27) |
-| TFT-lite | 48,6% (p=0,68) | 47,6% (p=0,45) | 51,4% (p=0,68) |
+| Transformer encoder | 48,6% (p=0,68) | 47,6% (p=0,45) | 51,4% (p=0,68) |
 
 **Ninguna de las 27 combinaciones (modelo × horizonte) alcanza significancia
 convencional** ($p<0{,}05$); el valor más bajo (XGBoost, $h=3$, $p=0{,}07$) tampoco la
@@ -2147,13 +2204,26 @@ conclusión que el diseño experimental de este trabajo esté en condiciones de
 demostrar.
 
 **Implicancia para la Fase 5 del proyecto (comparación y selección de modelo
-final):** un ensamble no puede generar señal que no está presente en sus modelos de
-entrada —combinar diez modelos que ya empatan con su naive no debería superarlo, ni
-del lado de dirección ni del lado de volatilidad—. Esto cambia sustancialmente el
-alcance esperable de esa fase respecto de lo previsto originalmente en el Plan de
-Trabajo Final (que preveía desarrollo de ensamble y selección de un modelo ganador),
-y su redefinición con la dirección del proyecto es, al momento de escribir este
-capítulo, un punto todavía abierto.
+final):** **corregido (4-nov-2026, Punto 10 del feedback de los directores)** — la
+formulación original de este párrafo afirmaba que "un ensamble no puede generar
+señal que no está presente en sus modelos de entrada", como una imposibilidad
+teórica. Eso no es correcto: una combinación de modelos puede reducir el error
+de pronóstico incluso si ninguno de sus integrantes supera individualmente al
+naive, siempre que sus errores no estén perfectamente correlacionados entre sí
+—es el mismo principio de reducción de varianza que sostiene a Random Forest o
+a cualquier método de ensamble (sección 3.3.4)—. La decisión correcta de
+encuadrar es de **alcance y costo**, no de imposibilidad: desarrollar y validar
+un ensamble (correlación de errores entre los nueve modelos de dirección, peso
+óptimo o *stacking*, validación sin fuga adicional) es un trabajo no trivial
+que, dado que ninguno de los modelos de entrada individualmente supera al naive
+de forma significativa (sección 5.4.1), tiene un retorno esperado incierto
+frente a su costo. Esto sigue cambiando el alcance esperable de la Fase 5
+respecto de lo previsto originalmente en el Plan de Trabajo Final (que preveía
+desarrollo de ensamble y selección de un modelo ganador), pero la redefinición
+debe documentarse como una decisión de priorización, no como una conclusión
+que se desprenda necesariamente de los resultados de Bloque 2. Es, al momento
+de escribir este capítulo, un punto todavía abierto a discutir con la
+dirección.
 
 ---
 

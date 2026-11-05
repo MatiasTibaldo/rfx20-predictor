@@ -172,9 +172,17 @@ las dos dimensiones del proyecto, no solo en dirección.
   consistente frente al naive respectivo, bajo los datos, modelos,
   horizontes y protocolo evaluados" (misma formulación que el Punto 7 del
   feedback de los directores fija para el Capítulo 5 de la tesis).
-- Un ensamble (Bloque 3) no puede inventar señal que no está en los
-  inputs — combinar modelos que ya empatan o pierden contra su naive no
-  debería superarlo, ni del lado de dirección ni del lado de volatilidad.
+- **Corregido (4-nov-2026, Punto 10 del feedback de los directores):** esta
+  sección decía que "un ensamble no puede inventar señal que no está en los
+  inputs", como imposibilidad teórica. No es correcto — una combinación
+  puede reducir el error aunque ningún integrante supere individualmente al
+  naive, si sus errores no están perfectamente correlacionados (mismo
+  principio que sostiene a Random Forest). La decisión de no desarrollar un
+  ensamble en Bloque 3 es de **alcance y costo** (validarlo bien, sobre
+  nueve modelos de dirección, es trabajo no trivial con retorno incierto
+  dado que ninguno individualmente supera al naive de forma significativa —
+  Punto 9 del feedback), no una conclusión que se desprenda necesariamente
+  de que los modelos de entrada empaten o pierdan contra su naive.
 - Si en el futuro se quisiera reabrir la pregunta de dirección, el camino
   no es más modelos sobre los mismos datos — es sumar información de
   naturaleza distinta a la ya usada (order flow, datos intradiarios,

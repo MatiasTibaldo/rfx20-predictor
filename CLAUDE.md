@@ -614,27 +614,70 @@ económica acotada (ítem condicional del punto) queda documentada como
 trabajo futuro bien definido, no ejecutada — backtestear el costo de operar
 una señal no distinguible del azar tiene valor informativo bajo.
 
+### Punto 10 del feedback de los directores: ajustes del documento (4 nov 2026)
+
+Ver `docs/decisions/punto10_ajustes_documento_nov2026.md`.
+
+- **Tasa implícita/term spread**: ya no se leen como "expectativas de
+  inflación/devaluación" sin más — se documentan como proxy de condiciones
+  de financiamiento, con el supuesto adicional que haría falta para la
+  lectura macro explícitamente señalado como no verificado.
+- **"TFT-lite" → "Transformer encoder"**: renombrado en toda la prosa de la
+  tesis (14 ocurrencias) — nombre más preciso, ya que el componente central
+  es literalmente una `TransformerEncoderLayer` de PyTorch. Los
+  identificadores de código (`tft_lite.py`, `TFTLiteRegressor`, archivos de
+  resultados) se mantienen sin cambios por trazabilidad — decisión de
+  alcance explícita, no un renombre de código.
+- **Tabla comparativa de antecedentes** (Tabla 3.1, capítulo 3 de la tesis):
+  8 estudios ya citados, columnas estudio/activo/variable objetivo/familias
+  comparadas/validación. Completada solo con lo verificable desde la prosa
+  ya escrita (3/8 estudios clasificables en nivel vs. retorno) — el resto
+  marcado explícitamente "no especificado" en vez de inventar un valor
+  plausible, pendiente de confirmar contra las fuentes originales.
+- **Imposibilidad teórica del ensamble, corregida** en 3 documentos (tesis,
+  síntesis, avance): una combinación sí puede reducir error aunque ningún
+  integrante supere individualmente al naive, si los errores no están
+  perfectamente correlacionados — el encuadre correcto es de alcance/costo,
+  no de imposibilidad.
+- **Hoja de ruta del director**: de sus 6 pasos propuestos, 5 ya están
+  hechos (reconciliación, continuidad de base, verificación de
+  objetivos/particiones, re-corrida — más amplia de lo pedido, batería
+  completa no solo representativa —, y métricas completas). **Falta uno: la
+  evaluación final sobre el conjunto de test reservado (86 filas,
+  2026-04-20 → 2026-08-25)** — nunca tocado hasta ahora por diseño, es el
+  hito natural que sigue tras cerrar los 10 puntos del feedback.
+
 ### Próximo paso (retomar acá)
 
-**Bloque 2 completo (Track A + Track B), con visualización, re-corrido
-post-fix.** Sigue **Bloque 3: comparación y selección** — framework de
-evaluación multicriterio (RMSE/MAE/MAPE, hit ratio, backtesting con
-Sharpe/drawdown, robustez por régimen de volatilidad) y selección del
-modelo final — todavía sin arrancar código. **Nota importante:** con el
-resultado de GARCH revertido, Bloque 2 ya no deja un "lado ganador"
-(ni dirección ni volatilidad) — la evaluación de ensamble planeada para
-Bloque 3 pierde su base (no tiene sentido combinar modelos que ya empatan
-con su naive, y ya no hay un modelo de volatilidad positivo para explorar
-combinaciones de ese lado). Vale la pena discutir con el alumno el alcance
-de Bloque 3 antes de arrancar código.
+**[Actualizado 4-nov-2026] Los 10 puntos del feedback de los directores
+(oct-nov 2026) quedan cerrados** — ver las secciones "Punto 1" a "Punto 10"
+más arriba para el detalle completo de cada uno, y
+`docs/decisions/punto10_ajustes_documento_nov2026.md` sección 5 para el
+balance contra la hoja de ruta que proponen los directores. De esa hoja de
+ruta, el único paso que sigue pendiente es la **evaluación final sobre el
+conjunto de test reservado** (86 filas, 2026-04-20 → 2026-08-25, 100%
+out-of-sample, nunca tocado hasta ahora por diseño) — una única pasada, no
+iterativa, sobre el modelo o conjunto de modelos que se decida llevar a esa
+instancia. Antes de correrla: confirmar que estén disponibles todos los
+predictores necesarios para ese tramo (no solo el spot del índice, Punto 4).
+
+Nota sobre el estado de Bloque 2: con GARCH perdiendo contra su naive en los
+3 horizontes (Punto 8) y ninguno de los 9 modelos de dirección mostrando una
+mejora significativa (Punto 9), Bloque 2 no deja un "lado ganador". La
+evaluación de ensamble para Bloque 3 ya no se descarta por imposibilidad
+teórica (corregido, Punto 10) — sigue siendo una decisión de alcance/costo a
+discutir con la dirección, no una conclusión forzada por los resultados.
 
 **Pregunta que quedó abierta (6-7 sep 2026) — ya resuelta (8 sep 2026):**
 se evaluó extender a horizontes largos (10/21 días hábiles, ~2 semanas/1
 mes) con un dataset aparte (`features_long_ext.parquet`, no fusionado al
 canónico) y un CV con purge para evitar la fuga por solapamiento de
 ventanas. Resultado: mismo patrón que a 1/3/5 días — ARIMA/SVM/RF/XGBoost/
-LightGBM sin mejora consistente sobre el naive, GARCH sigue siendo el único
-positivo (~39-40% menos error de varianza). **Se descartó esta línea**
+LightGBM sin mejora consistente sobre el naive; GARCH mostraba ~39-40% menos
+error de varianza en esta exploración puntual, pero esa cifra nunca se
+re-confirmó tras los fixes posteriores (sep-2019, Punto 3) y no debe citarse
+como vigente (ver nota de "Actualizado 4-nov-2026" más arriba — GARCH ya no
+es positivo en ningún caso confirmado). **Se descartó esta línea**
 (condición de salida acordada de antemano) — no se sube a producción, el
 alcance de horizontes del proyecto sigue siendo 1/3/5 días. Quedan como
 mejoras permanentes del protocolo compartido: el purge de CV
