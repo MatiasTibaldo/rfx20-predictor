@@ -1914,8 +1914,7 @@ está diseñado para responder.
 
 La comparación experimental por AIC entre innovaciones Normal y t-Student (sección
 4.5.1) resultó contundente a favor de la segunda (diferencia de AIC de
-aproximadamente 2.229 puntos), consistente con la curtosis extrema ya observada en
-el diagnóstico de ARIMA. El orden ganador fue **GARCH(1,1)** con distribución
+aproximadamente 2.229 puntos). El orden ganador fue **GARCH(1,1)** con distribución
 t-Student, con los siguientes coeficientes estimados sobre el conjunto de
 entrenamiento: $\omega = 1{,}2254$, $\alpha = 0{,}1235$, $\beta = 0{,}7343$,
 $\nu = 4{,}57$ (en unidades escaladas, ver nota metodológica de la sección 4.5.1).
@@ -1923,29 +1922,54 @@ La persistencia ($\alpha + \beta = 0{,}858$) implica una vida media de los shock
 volatilidad de aproximadamente 4,5 ruedas —menos de una semana hábil—, moderada
 frente a los valores de 0,95-0,99 habituales en índices de mercados desarrollados: el
 RFX20 "olvida" un shock de volatilidad relativamente rápido. El grado de libertad
-bajo de la distribución t ($\nu = 4{,}57$, apenas por encima del mínimo para que
-exista curtosis finita) confirma colas muy pesadas, en línea con la curtosis de
-ARIMA.
+bajo de la distribución t ($\nu = 4{,}57$) confirma colas pesadas **en las
+innovaciones estandarizadas** del modelo. Esto es distinto de la curtosis
+incondicional (marginal) del retorno crudo reportada en 5.1.1: un proceso GARCH
+genera, por el solo efecto del agrupamiento de volatilidad, una curtosis
+incondicional mayor que la de sus propias innovaciones — ambas cantidades son
+consistentes entre sí, pero no son el mismo número y no deben citarse de forma
+intercambiable.
 
-**Tabla 5.2.** GARCH vs. naive (varianza incondicional de entrenamiento), RMSE sobre
-el proxy de varianza realizada (retorno al cuadrado), conjunto de validación.
+El target que se pronostica (`log_return_fwd_h`) es el retorno **acumulado** de t a
+t+h (sección 4.2.2), no el retorno puntual del día t+h — por lo tanto el objetivo
+correcto en h=3 y h=5 es la varianza del retorno acumulado a h días, no la varianza
+de un único día futuro. Bajo la especificación de media cero, $\mathrm{Var}(\text{suma
+de } h \text{ retornos}) = \text{suma de las } h \text{ varianzas de un paso}$, así
+que el pronóstico se construye como $\sigma^2_{h} = \sum_{i=1}^{h}\sigma^2_{t+i}$, y
+se evalúa contra `log_return_fwd_h`$^2$ (el cuadrado del retorno acumulado) — target
+y pronóstico miden la misma cantidad en los tres horizontes.
 
-| Horizonte | RMSE GARCH | RMSE naive | Variación vs. naive |
-|---|---:|---:|---:|
-| 1 | 0,0027724 | 0,0027481 | +0,9% |
-| 3 | 0,0027799 | 0,0027484 | +1,2% |
-| 5 | 0,0027849 | 0,0027487 | +1,3% |
+**Tabla 5.2.** GARCH vs. naive (varianza incondicional de entrenamiento) y vs. un
+benchmark adicional de volatilidad móvil (EWMA, $\lambda=0{,}94$), RMSE y QLIKE
+sobre el proxy de varianza realizada (retorno acumulado al cuadrado), conjunto de
+validación.
 
-A diferencia de lo que el diagnóstico de ARIMA hacía anticipar, GARCH **no logra
-mejorar** sobre el naive de varianza constante en ninguno de los tres horizontes. Se
-verificó que esta comparación no depende de una definición particularmente
-desfavorable del naive: un naive alternativo calculado sobre la varianza de
-entrenamiento winsorizada (recorte del 1%/99% para reducir la sensibilidad a
-outliers) resulta igual o levemente peor que el naive crudo —esperable, dado que la
-varianza muestral cruda es, por construcción, el estimador que minimiza el error
-cuadrático medio bajo estacionariedad—, y GARCH sigue sin superar a ninguno de los
-dos. La comparación es, por lo tanto, robusta a esta variante metodológica y no un
-artefacto de cómo se construye la referencia de comparación.
+| Horizonte | RMSE GARCH | RMSE naive | RMSE EWMA | QLIKE GARCH | QLIKE naive | QLIKE EWMA |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 0,0027724 | 0,0027481 | 0,0027784 | -5,988 | -6,043 | -6,011 |
+| 3 | 0,0077450 | 0,0076656 | 0,0077714 | -4,794 | -4,895 | -4,844 |
+| 5 | 0,0134430 | 0,0132549 | 0,0135442 | -4,224 | -4,356 | -4,288 |
+
+A diferencia de lo que el diagnóstico de ARIMA hacía anticipar, **ninguno de los
+tres métodos** —naive de varianza constante, GARCH, o EWMA— mejora sobre los otros
+dos en ambas métricas: GARCH queda consistentemente peor que el naive (RMSE y
+QLIKE, los tres horizontes), y EWMA queda peor todavía que GARCH. Esto es, en sí
+mismo, informativo: EWMA no incorpora reversión a la media en su pronóstico
+(equivalente a un proceso IGARCH, persistencia=1), mientras que GARCH sí la tiene
+($\alpha+\beta=0{,}858<1$) — en un mercado donde la volatilidad revierte
+relativamente rápido (vida media ~4,5 ruedas), es esperable que un modelo sin
+reversión quede peor que uno con reversión moderada, que es exactamente lo
+observado. Se verificó además que la comparación no depende de una definición
+particularmente desfavorable del naive: un naive alternativo calculado sobre la
+varianza de entrenamiento winsorizada (recorte del 1%/99%) resulta igual o
+levemente peor que el naive crudo, y GARCH sigue sin superar a ninguno de los dos.
+Esta robustez del naive frente a la winsorización **no se debe a que la varianza
+muestral de train minimice "por construcción" el error fuera de muestra** — esa
+garantía solo existe dentro de la propia muestra de entrenamiento, que es donde el
+estimador de mínimos cuadrados se define; que también resulte competitivo sobre
+`val` es una observación empírica de este dataset, no una propiedad matemática
+general. La comparación es, de todos modos, robusta a esta variante metodológica y
+no un artefacto de cómo se construye la referencia.
 
 #### 5.1.3. Lectura conjunta
 
