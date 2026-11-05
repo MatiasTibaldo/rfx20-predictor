@@ -597,6 +597,23 @@ también tenía dos afirmaciones sueltas ("GARCH es el hallazgo central/único
 positivo de Bloque 2", sin banner de corrección cerca) — agregadas notas
 "[Actualizado 4-nov-2026]" en ambos lugares.
 
+### Punto 9 del feedback de los directores: medida de incertidumbre (4 nov 2026)
+
+Ver `docs/decisions/punto9_incertidumbre_nov2026.md`. Implementado
+`scripts/punto9_bootstrap_ci.py`: intervalo de confianza 95% por bootstrap de
+bloques móviles (L=10, B=2000 — no i.i.d., para no subestimar el error
+estándar por la superposición de horizontes) para las 27 combinaciones
+(9 modelos de dirección × 3 horizontes). **Hallazgo central: 0/27 mejoras
+significativas sobre el naive** (las pequeñas "mejoras" de ARIMA/RF <0,4%
+tienen IC que incluyen 0 — exactamente lo que sospechaba el director) **pero
+4/27 sí son significativamente peores** (XGBoost h=5, CNN-LSTM h=1,
+Transformer encoder h=1 y h=3) — el único efecto detectable va en contra del
+modelo, nunca a favor. Agregada apertura temporal (RMSE por mitad de val) —
+sin evidencia de que el resultado dependa de pocas jornadas. La evaluación
+económica acotada (ítem condicional del punto) queda documentada como
+trabajo futuro bien definido, no ejecutada — backtestear el costo de operar
+una señal no distinguible del azar tiene valor informativo bajo.
+
 ### Próximo paso (retomar acá)
 
 **Bloque 2 completo (Track A + Track B), con visualización, re-corrido
