@@ -647,6 +647,28 @@ Ver `docs/decisions/punto10_ajustes_documento_nov2026.md`.
   2026-04-20 → 2026-08-25)** — nunca tocado hasta ahora por diseño, es el
   hito natural que sigue tras cerrar los 10 puntos del feedback.
 
+### Complemento al Punto 9: robustez por semilla (5 nov 2026)
+
+Ver `docs/decisions/punto9_robustez_semillas_nov2026.md`. Extiende el
+bootstrap de bloques del Punto 9 (incertidumbre por remuestreo) con una
+segunda fuente de incertidumbre: variabilidad por semilla. Corridos los 8
+modelos no determinísticos de Bloque 2 (ARIMA/GARCH quedan afuera — sin
+generador aleatorio) con 5 semillas (42 oficial + 7/123/2024/555) sobre el
+dataset baseline (`scripts/punto_seeds_full_battery.py`).
+
+- **RF h=1 es la única combinación sin signo consistente** (rango -0,12% a
+  +1,41%) — confirma, por una vía distinta al bootstrap, que esa pequeña
+  mejora de la semilla oficial es ruido.
+- **Las 23 combinaciones restantes mantienen el mismo signo (peor que el
+  naive) en las 5 semillas.**
+- **La semilla oficial (42) no está sesgada hacia el peor caso** — en
+  varios modelos queda en el extremo más favorable de las 5.
+- **GRU h=5 es extremadamente sensible a la semilla** (+4,00% a +36,94%),
+  coherente con la inestabilidad ya diagnosticada en el Punto 6.
+
+La conclusión central de Bloque 2 se sostiene bajo esta segunda fuente de
+incertidumbre, no solo bajo la de remuestreo.
+
 ### Próximo paso (retomar acá)
 
 **[Actualizado 4-nov-2026] Los 10 puntos del feedback de los directores
