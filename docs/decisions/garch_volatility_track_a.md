@@ -75,10 +75,13 @@
 > acumulado, no de un retorno puntual. Target y pronóstico miden la misma
 > cantidad en los tres horizontes.
 >
-> **Lectura del benchmark EWMA**: ninguno de los tres métodos (naive plano,
-> GARCH, EWMA) mejora sobre el naive de varianza constante — de hecho
-> **EWMA es el peor de los tres** (+1,10%/+1,38%/+2,18% vs. naive, contra
-> +0,88%/+1,03%/+1,42% de GARCH). Es un resultado informativo: EWMA no
+> **Lectura del benchmark EWMA (explicitada 6-nov-2026, seguimiento del
+> director)**: **GARCH supera a EWMA en esta comparación** (+0,88%/+1,03%/+1,42%
+> vs. naive, contra +1,10%/+1,38%/+2,18% de EWMA en los mismos tres
+> horizontes), **pero la referencia de varianza constante (el naive) sigue
+> siendo la de mejor desempeño de los tres** — ninguno de los tres métodos
+> (naive plano, GARCH, EWMA) mejora sobre el naive de varianza constante; de
+> hecho **EWMA es el peor de los tres**. Es un resultado informativo: EWMA no
 > tiene reversión a la media en su pronóstico (equivalente a un proceso
 > IGARCH, persistencia=1), mientras que GARCH sí la tiene
 > (α+β=0,858 < 1) — en un mercado donde la volatilidad revierte
@@ -206,16 +209,22 @@ volatilidad):
   (ν>4) para que exista curtosis finita — confirma colas muy pesadas **en
   las innovaciones estandarizadas** (los residuos del modelo, una vez
   divididos por su desvío condicional estimado). **Corrección (4-nov-2026,
-  Punto 8 del feedback):** esto no es lo mismo que la curtosis de 821 de
-  Etapa 1, que es la curtosis **incondicional** (marginal) del retorno
-  crudo, sin condicionar en la volatilidad del momento. Son cantidades
-  relacionadas pero distintas: un proceso GARCH con innovaciones de
-  curtosis moderada ya genera, por el solo hecho del agrupamiento de
-  volatilidad (mezclar períodos de alta y baja varianza en una misma
-  serie), una curtosis incondicional **mayor** que la de sus propias
-  innovaciones — nunca menor. Que ν=4.57 confirme colas pesadas en las
-  innovaciones es consistente con, pero no equivale numéricamente a, la
-  curtosis de 821 del retorno sin condicionar.
+  Punto 8 del feedback, actualizada 6-nov-2026):** esto no es lo mismo que
+  la curtosis **incondicional** (marginal) del retorno crudo citada en
+  Etapa 1 (821), sin condicionar en la volatilidad del momento. Esa cifra
+  de 821, además, correspondía a una versión de los datos previa a la
+  corrección del período corrompido de sep-2019 — recalculada sobre los
+  datos ya corregidos, la curtosis incondicional de train es
+  considerablemente menor (≈18.8, no-excedente/Pearson; ver
+  `docs/tesis/proyecto_final_tibaldo.md` sección 5.1.1), aunque igual de
+  concluyente: muy por encima de 3. Son cantidades relacionadas pero
+  distintas: un proceso GARCH con innovaciones de curtosis moderada ya
+  genera, por el solo hecho del agrupamiento de volatilidad (mezclar
+  períodos de alta y baja varianza en una misma serie), una curtosis
+  incondicional **mayor** que la de sus propias innovaciones — nunca menor.
+  Que ν=4.57 confirme colas pesadas en las innovaciones es consistente con,
+  pero no equivale numéricamente a, la curtosis incondicional del retorno
+  sin condicionar.
 
 **Walk-forward (294/294 refits ok) — GARCH(1,1) t-Student vs. varianza
 constante (naive):**
@@ -248,8 +257,8 @@ a asumir volatilidad constante.
   concreto a contrastar contra la literatura de mercados desarrollados al
   discutir resultados.
 - El grado de libertad bajo de la t (ν=4.57, curtosis de las innovaciones
-  estandarizadas — distinta de la curtosis incondicional de 821 de Etapa 1,
-  ver corrección arriba) es evidencia de que cualquier modelo posterior que
+  estandarizadas — distinta de la curtosis incondicional de Etapa 1, cifra
+  corregida, ver nota arriba) es evidencia de que cualquier modelo posterior que
   asuma errores gaussianos (incluidos varios de ML clásico sin ajuste de
   distribución) subestimará la probabilidad de movimientos extremos.
 - La comparación Normal vs. t-Student, aunque descartada de las métricas

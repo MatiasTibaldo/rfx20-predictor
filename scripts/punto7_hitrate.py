@@ -6,6 +6,12 @@ los 9 modelos de dirección de Bloque 2, sobre las predicciones ya
 persistidas de la re-corrida del Punto 3 (target acumulado, purga de borde),
 con un test binomial contra 50% para cada (modelo, horizonte).
 
+Agrega (seguimiento del director, 6-nov-2026) un benchmark adicional:
+"mayoría de train" — predecir siempre el signo más frecuente del retorno
+acumulado en train, por horizonte (el balance de subas/bajas puede variar
+por horizonte, así que 50% no es necesariamente la referencia más justa).
+Calculado sobre train para no filtrar información de val hacia la regla.
+
 Uso: uv run python scripts/punto7_hitrate.py
 """
 
@@ -51,6 +57,32 @@ def hitrate(path: str, horizon_filter: int | None) -> dict:
     return {"n": n, "hits": hits, "hit_pct": hit_pct, "pct_pos_actual": pct_pos_actual, "p_value": pval}
 
 
+def majority_train_baseline(h: int) -> dict:
+    """Hit-rate on val of "always predict train's majority sign", horizon h."""
+    df = pl.read_parquet("data/features/v1/features_long.parquet")
+    target_col = f"log_return_fwd_{h}"
+
+    train_y = df.filter(pl.col("split") == "train")[target_col].drop_nulls().to_numpy()
+    train_pct_pos = float((train_y > 0).mean() * 100)
+    majority_sign = 1.0 if train_pct_pos >= 50.0 else -1.0
+
+    val_y = df.filter(pl.col("split") == "val")[target_col].drop_nulls().to_numpy()
+    true_sign = np.sign(val_y)
+    n = len(val_y)
+    hits = int((true_sign == majority_sign).sum())
+    hit_pct = hits / n * 100
+    pval = stats.binomtest(hits, n, 0.5, alternative="two-sided").pvalue
+    return {
+        "n": n,
+        "hits": hits,
+        "hit_pct": hit_pct,
+        "pct_pos_actual": float((true_sign > 0).mean() * 100),
+        "p_value": pval,
+        "train_pct_pos": train_pct_pos,
+        "majority_sign": "+" if majority_sign > 0 else "-",
+    }
+
+
 def main() -> None:
     rows = []
     for name, path_tpl, has_horizon_col in CONFIGS:
@@ -58,6 +90,16 @@ def main() -> None:
             path = path_tpl if has_horizon_col else path_tpl.format(h=h)
             r = hitrate(path, horizon_filter=h if has_horizon_col else None)
             rows.append({"model": name, "horizon": h, **r})
+
+    print(f"\n{'Baseline':<18}{'h':<4}{'%pos train':<12}{'signo':<7}{'n':<6}{'hit%':<9}{'p-value'}")
+    for h in HORIZONS:
+        r = majority_train_baseline(h)
+        print(
+            f"{'Mayoría train':<18}{h:<4}{r['train_pct_pos']:<12.2f}{r['majority_sign']:<7}"
+            f"{r['n']:<6}{r['hit_pct']:<9.2f}{r['p_value']:.4f}"
+        )
+        rows.append({"model": "Mayoría de train", "horizon": h, **{k: v for k, v in r.items() if k not in ("train_pct_pos", "majority_sign")}})
+    print()
 
     out = pl.DataFrame(rows)
     results_dir = settings.RESULTS_DIR / "punto7_hitrate"

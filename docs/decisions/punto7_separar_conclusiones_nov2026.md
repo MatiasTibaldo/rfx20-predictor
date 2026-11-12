@@ -65,6 +65,7 @@ borde):
 | GRU | 52,04% (p=0,52) | 46,26% (p=0,22) | 47,28% (p=0,38) |
 | CNN-LSTM | 49,32% (p=0,86) | 46,60% (p=0,27) | 46,60% (p=0,27) |
 | TFT-lite | 48,64% (p=0,68) | 47,62% (p=0,45) | 51,36% (p=0,68) |
+| **Mayoría de train** (siempre "+") | **49,66% (p=0,95)** | **47,62% (p=0,45)** | **47,28% (p=0,38)** |
 
 **0 de 27 combinaciones (modelo, horizonte) tienen p < 0,05.** El p-valor
 más bajo es XGBoost h=3 (p=0,07), que tampoco cruza el umbral convencional —
@@ -77,6 +78,31 @@ ausencia de capacidad direccional a partir de un RMSE parecido al naive —
 se midió con la métrica correcta (hit-rate + test de hipótesis) y el
 resultado es consistente con lo que ya sugería el RMSE, pero ahora con
 evidencia propia de esa dimensión.
+
+## 2. Benchmark de "mayoría de train" — agregado (6-nov-2026, seguimiento del director)
+
+En la respuesta al mail de cierre de los 10 puntos, el director pidió sumar,
+además del 50%, el acierto de una regla que pronostique siempre el signo más
+frecuente en entrenamiento — "porque el balance entre subas y bajas puede
+variar según el horizonte". Implementado en
+`scripts/punto7_hitrate.py::majority_train_baseline()`: calcula el signo
+mayoritario de `log_return_fwd_h` **en train** (nunca en val, para no filtrar
+información hacia la regla) y mide su hit-rate sobre las mismas fechas de val
+usadas para los 9 modelos.
+
+**Confirmado: el balance no es 50/50 y crece con el horizonte** — 55,81% de
+días positivos en train para h=1, 57,98% para h=3, 59,54% para h=5 (la regla
+resultante es "siempre +" en los tres horizontes). Resultado del benchmark
+sobre val: 49,66% / 47,62% / 47,28% (h=1/3/5), ninguno significativo
+(p=0,95 / 0,45 / 0,38).
+
+**Hallazgo relevante**: este benchmark sin ningún entrenamiento —solo el
+sesgo histórico de signo de train— queda en línea con, o por encima de,
+varios de los 9 modelos entrenados (supera a ARIMA, SVM, CNN-LSTM y TFT-lite
+en h=1; a SVM, GRU y CNN-LSTM en h=3, e iguala a TFT-lite en ese mismo
+horizonte). Refuerza la conclusión de dirección: ningún modelo entrenado
+anticipa el signo del retorno por encima de lo que ya anticipa el sesgo
+histórico simple de la propia serie.
 
 ## 2. Corrección de la sección 5.4 del Capítulo 5
 

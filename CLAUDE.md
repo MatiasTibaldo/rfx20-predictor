@@ -614,6 +614,12 @@ económica acotada (ítem condicional del punto) queda documentada como
 trabajo futuro bien definido, no ejecutada — backtestear el costo de operar
 una señal no distinguible del azar tiene valor informativo bajo.
 
+**[Corregido 6-nov-2026]**: este contenido nunca había llegado a la tesis
+(mismo tipo de hueco que el del Punto 8) — agregada la sección 5.4.3 nueva
+en `docs/tesis/proyecto_final_tibaldo.md` con la Tabla 5.9 completa y la
+aclaración, pedida por el director, de que los 27 IC son individuales/
+marginales, no una región conjunta.
+
 ### Punto 10 del feedback de los directores: ajustes del documento (4 nov 2026)
 
 Ver `docs/decisions/punto10_ajustes_documento_nov2026.md`.

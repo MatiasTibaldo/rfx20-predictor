@@ -148,10 +148,14 @@ código usado en esta re-corrida — ver
   `docs/decisions/*.md` de Bloque 2 que todavía citan el target viejo
   (`garch_volatility_track_a.md` ya corregido, ver
   `docs/decisions/punto8_garch_evaluacion_completa_nov2026.md`).
-- Actualizar `docs/tesis/proyecto_final_tibaldo.md` Tabla 5.1 (ARIMA) con el
-  orden real (0,0,1) y las cifras del target acumulado — Tabla 5.2 (GARCH)
-  ya corregida (Punto 8). `docs/tesis/draf_proyecto_final_google_docs.md` no
-  llega todavía a estas tablas.
+- **[Hecho 6-nov-2026]** `docs/tesis/proyecto_final_tibaldo.md` sección
+  5.1.1 y Tabla 5.1 (ARIMA) corregidas: orden real (0,0,1, AIC=-6996,37),
+  cifras del target acumulado, y las estadísticas de diagnóstico
+  (std/asimetría de train, Ljung-Box, ARCH-LM) recalculadas sobre los datos
+  ya corregidos — citaban valores de una versión de los datos previa a los
+  Puntos 2 y 3 (std 6,7% en vez de 2,93%; asimetría -24 en vez de -1,17) que
+  nadie había notado hasta ahora. `docs/tesis/draf_proyecto_final_google_docs.md`
+  no llega todavía a estas tablas.
 - `docs/avance_trabajo_final.md` (sección 4.2.1) ya corregido en el mismo
   pase que el Punto 8 — tabla de ARIMA/GARCH con el target acumulado,
   orden real de ARIMA, QLIKE y EWMA.

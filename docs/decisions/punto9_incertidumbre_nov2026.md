@@ -50,6 +50,17 @@ con la medida de incertidumbre que pedía el director, la conclusión de
 "ninguna mejora consistente": no es solo que no se vea una ventaja — cuando
 sí se detecta una diferencia significativa, es contra el modelo, no a favor.
 
+**Aclaración sobre el alcance de los intervalos (6-nov-2026, seguimiento del
+director):** cada uno de los 27 intervalos de confianza es **individual/marginal**
+— cubre al 95% la diferencia de esa combinación (modelo, horizonte) tomada de
+forma aislada, no una región de confianza conjunta sobre las 27 a la vez.
+Interpretar correctamente "4 diferencias desfavorables de 27" significa: 4
+hallazgos marginales independientes que cada uno, por separado, resulta
+significativo a su propio nivel del 95% — no 4 sobre un conjunto ya ajustado
+por comparaciones múltiples (ver nota de multiplicidad más abajo, que
+discute el riesgo inverso: cuántos falsos positivos esperaríamos por azar
+dado que no se corrigió por las 27 pruebas).
+
 ## 2. No sobre-interpretar la mejor celda aislada
 
 Se evaluaron las 27 combinaciones juntas, no una elegida después de ver los

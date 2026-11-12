@@ -284,6 +284,18 @@ horizontes de corto plazo (de uno a cinco días hábiles), como herramienta de s
 para la toma de decisiones en Primary S.A. y como aporte académico al estudio de la
 predicción de series financieras en mercados emergentes.
 
+**Acotación de alcance (agregada 6-nov-2026, seguimiento del feedback de los
+directores):** este trabajo se circunscribe al **desempeño predictivo** de los
+modelos —su capacidad de anticipar retorno, dirección y volatilidad bajo un
+protocolo de validación temporal riguroso—, no a su desempeño económico como
+estrategia operable. Una evaluación económica (costos de transacción, lag de
+ejecución entre la señal y la operación, tratamiento de posiciones superpuestas
+en horizontes de varios días, sobre el instrumento efectivamente operable —los
+futuros del RFX20, no el índice de contado) queda **fuera del objetivo
+formal de esta tesis**, documentada como una extensión posible para trabajo
+futuro (ver discusión en `docs/decisions/punto9_incertidumbre_nov2026.md`,
+sección 4).
+
 **Objetivos Específicos**
 
 - Construir un pipeline de datos reproducible que consolide series históricas del
@@ -1870,38 +1882,51 @@ referenciadas (`docs/figures/`) fueron generadas con el mismo criterio.)*
 
 #### 5.1.1. ARIMA/SARIMA
 
-La búsqueda en grilla por AIC (sección 4.5.1, 288 candidatos) convergió a un
-resultado llamativo por su simplicidad: el orden ganador es **$(0,0,0)$, sin
-componente estacional** —ninguno de los candidatos con estructura autorregresiva, de
-media móvil o estacional superó en AIC a la ausencia total de esa estructura—. Con
-ese orden, y sin término de tendencia, el modelo queda reducido a un único parámetro
-estimado: la varianza del error ($\sigma^2 = 0{,}0045$, equivalente a un desvío
-estándar diario de aproximadamente 6,7%). En consecuencia, el pronóstico puntual del
-modelo es matemáticamente cero en cualquier horizonte —no una aproximación cercana a
-cero, sino exactamente cero—, por lo que sus métricas de error coinciden, bit a bit,
-con las de un pronóstico naive que siempre predice retorno cero (Tabla 5.1).
+**Corregido (6-nov-2026):** esta sección citaba el orden ganador y las
+estadísticas de diagnóstico de una corrida anterior a la corrección del
+target acumulado (Punto 3 del feedback de los directores) y a la validación
+de continuidad de la base (Punto 2) — quedaron desactualizadas sin que
+nadie lo notara hasta ahora. Recalculado directamente sobre `log_return` de
+train, ya con ambas correcciones incorporadas.
+
+La búsqueda en grilla por AIC (sección 4.5.1, 288 candidatos) converge a
+**$(0,0,1)$, un MA(1) sin componente estacional** (AIC $=-6996{,}37$) — un
+resultado casi tan simple como "sin estructura", pero no idéntico: existe un
+término de media móvil de un paso, de magnitud pequeña, que el pronóstico
+naive de retorno cero no reproduce exactamente. El desvío estándar del
+retorno diario en train es **2,93%** (la cifra anterior, 6,7%, correspondía
+a una versión de los datos previa a las correcciones de los Puntos 2 y 3).
+Consistente con ese MA(1), un test de **Ljung-Box** sobre el primer retardo
+de la propia serie **rechaza** la ausencia de autocorrelación
+($\text{stat}=6{,}42$, $p=0{,}011$) — hay una dependencia de corto plazo
+real, aunque pequeña, que motiva exactamente el orden que elige el AIC. El
+test de **Jarque-Bera** rechaza con fuerza la normalidad: la serie presenta
+una asimetría negativa marcada (coeficiente de asimetría $\approx -1{,}17$,
+es decir, los movimientos bruscos a la baja son más extremos que las subas
+equivalentes) y una curtosis muy por encima de 3 (el valor de referencia de
+la distribución normal), indicando outliers concentrados en unas pocas
+jornadas más que un patrón difuso en toda la serie (la cifra de asimetría
+anterior, $\approx-24$, también correspondía a la versión de datos sin
+corregir). Más relevante aún para lo que sigue: un test de tipo
+**ARCH-LM** rechaza con fuerza el supuesto de varianza constante
+($\text{stat}=15{,}66$, $p<0{,}001$) —la varianza del error cambia en el
+tiempo, alternando períodos de calma y de turbulencia—, algo que un modelo
+de media condicional, por sí solo, no puede representar.
+
+Dado que el componente MA(1) es de magnitud pequeña, su efecto sobre el
+pronóstico a $h=1$ es mínimo y se diluye casi por completo hacia $h=3$ y
+$h=5$ (el componente MA no tiene memoria más allá de un paso) — por eso las
+métricas de error del modelo quedan prácticamente, pero no exactamente,
+alineadas con las de un pronóstico naive que siempre predice retorno cero
+(Tabla 5.1).
 
 **Tabla 5.1.** ARIMA/SARIMA vs. naive (predecir retorno 0), conjunto de validación.
 
 | Horizonte | RMSE ARIMA | RMSE naive | Variación vs. naive |
 |---|---:|---:|---:|
-| 1 | 0,029536 | 0,029553 | -0,1% |
-| 3 | 0,029531 | 0,029531 | 0,0% |
-| 5 | 0,029479 | 0,029479 | 0,0% |
-
-El diagnóstico estadístico del modelo ajustado sobre el conjunto de entrenamiento
-aporta información relevante más allá del resultado puntual. El test de **Ljung-Box**
-sobre el primer retardo no rechaza la ausencia de autocorrelación en los residuos
-—coherente con que no había estructura lineal para capturar—, pero el test de
-**Jarque-Bera** rechaza con fuerza la normalidad: la serie presenta una asimetría
-negativa extrema (coeficiente de asimetría $\approx -24$, es decir, los movimientos
-bruscos a la baja son sustancialmente más extremos que las subas equivalentes) y una
-curtosis muy por encima de 3 (el valor de referencia de la distribución normal),
-indicando outliers extremos concentrados en unas pocas jornadas más que un patrón
-difuso en toda la serie. Más relevante aún para lo que sigue: un test de
-**heterocedasticidad** rechaza con fuerza el supuesto de varianza constante que ARIMA
-asume —la varianza del error cambia en el tiempo, alternando períodos de calma y de
-turbulencia—, algo que un único parámetro $\sigma^2$ fijo no puede representar.
+| 1 | 0,029536 | 0,029553 | -0,06% |
+| 3 | 0,052451 | 0,052421 | +0,06% |
+| 5 | 0,068479 | 0,068560 | -0,12% |
 
 Esta última observación es la motivación metodológica concreta, y no una elección
 arbitraria, para evaluar GARCH a continuación: el resultado de ARIMA es negativo
@@ -1951,9 +1976,10 @@ validación.
 | 5 | 0,0134430 | 0,0132549 | 0,0135442 | -4,224 | -4,356 | -4,288 |
 
 A diferencia de lo que el diagnóstico de ARIMA hacía anticipar, **ninguno de los
-tres métodos** —naive de varianza constante, GARCH, o EWMA— mejora sobre los otros
-dos en ambas métricas: GARCH queda consistentemente peor que el naive (RMSE y
-QLIKE, los tres horizontes), y EWMA queda peor todavía que GARCH. Esto es, en sí
+tres métodos mejora sobre la referencia de varianza constante**: dicho de forma
+explícita, **GARCH supera a EWMA en esta comparación, pero la referencia de
+varianza constante (el naive) sigue siendo la de mejor desempeño de los tres**,
+tanto en RMSE como en QLIKE, en los tres horizontes. Esto es, en sí
 mismo, informativo: EWMA no incorpora reversión a la media en su pronóstico
 (equivalente a un proceso IGARCH, persistencia=1), mientras que GARCH sí la tiene
 ($\alpha+\beta=0{,}858<1$) — en un mercado donde la volatilidad revierte
@@ -2166,7 +2192,16 @@ aciertos, sobre las mismas predicciones de validación de la Tabla 5.7 (n=294 po
 celda).
 
 **Tabla 5.8.** Hit-rate y significancia (test binomial vs. 50%), conjunto de
-validación.
+validación. Se incluye, además del umbral de 50%, un segundo benchmark pedido
+explícitamente por los directores: **"mayoría de train"**, la regla de
+predecir siempre el signo más frecuente del retorno acumulado observado en
+train para ese horizonte — calculada sobre train, no sobre val, para no
+filtrar información hacia la regla. El balance de subas y bajas en train
+**no es 50/50 y varía por horizonte** (55,8% de días positivos en $h=1$,
+58,0% en $h=3$, 59,5% en $h=5$ — la proporción de positivos crece con el
+horizonte, consistente con la acumulación de un *drift* leve), así que 50%
+no es necesariamente la referencia más justa, tal como señalan los
+directores.
 
 | Modelo | $h=1$ | $h=3$ | $h=5$ |
 |---|---:|---:|---:|
@@ -2179,14 +2214,24 @@ validación.
 | GRU | 52,0% (p=0,52) | 46,3% (p=0,22) | 47,3% (p=0,38) |
 | CNN-LSTM | 49,3% (p=0,86) | 46,6% (p=0,27) | 46,6% (p=0,27) |
 | Transformer encoder | 48,6% (p=0,68) | 47,6% (p=0,45) | 51,4% (p=0,68) |
+| **Mayoría de train** (siempre "+") | **49,7% (p=0,95)** | **47,6% (p=0,45)** | **47,3% (p=0,38)** |
 
-**Ninguna de las 27 combinaciones (modelo × horizonte) alcanza significancia
-convencional** ($p<0{,}05$); el valor más bajo (XGBoost, $h=3$, $p=0{,}07$) tampoco la
-alcanza, y con 27 pruebas sin corrección por comparaciones múltiples sería
-esperable encontrar 1-2 falsos positivos por azar si la verdadera tasa de acierto
-fuera 50% — no se encontró ninguno. Esto aporta evidencia propia de la dimensión
-de dirección, independiente del RMSE: bajo el protocolo evaluado, tampoco se
-detectó capacidad de anticipar el signo del retorno por encima del azar.
+**Ninguna de las 27 combinaciones modelo × horizonte, ni las 3 del benchmark
+de mayoría de train, alcanza significancia convencional** ($p<0{,}05$); el
+valor más bajo (XGBoost, $h=3$, $p=0{,}07$) tampoco la alcanza, y con 27
+pruebas sin corrección por comparaciones múltiples sería esperable encontrar
+1-2 falsos positivos por azar si la verdadera tasa de acierto fuera 50% — no
+se encontró ninguno. Más relevante todavía: **el benchmark de mayoría de
+train queda en línea con, o por encima de, varios de los nueve modelos
+entrenados** en los tres horizontes (ej. supera a ARIMA/SARIMA, SVM,
+CNN-LSTM y Transformer encoder en $h=1$; a SVM, GRU y CNN-LSTM en $h=3$, e
+iguala a Transformer encoder en ese mismo horizonte) — una regla sin ningún
+entrenamiento,
+que solo usa el sesgo histórico de signo de train, rinde tan bien como
+arquitecturas sustancialmente más complejas. Esto aporta evidencia propia de
+la dimensión de dirección, independiente del RMSE: bajo el protocolo
+evaluado, tampoco se detectó capacidad de anticipar el signo del retorno por
+encima de lo que ya anticipa el sesgo histórico de la propia serie.
 
 Esta conclusión tampoco se extiende, sin más, a la volatilidad: la ausencia de
 autocorrelación lineal en el retorno (ARIMA, sección 5.1) y la ausencia de hit-rate
@@ -2227,27 +2272,91 @@ exigente, esto se presenta como una lectura posible del resultado, no como una
 conclusión que el diseño experimental de este trabajo esté en condiciones de
 demostrar.
 
+#### 5.4.3. Incertidumbre de las comparaciones
+
+Las diferencias porcentuales de las Tablas 5.3, 5.6 y 5.7 son puntuales — no
+dicen si una mejora o un empeoramiento de, por ejemplo, 0,3% es distinguible
+de variabilidad muestral pura. Para responder eso, se calculó un intervalo
+de confianza del 95% por **bootstrap de bloques móviles** (longitud de
+bloque 10 jornadas, 2.000 remuestreos) para la diferencia porcentual de RMSE
+de cada una de las 27 combinaciones modelo × horizonte frente a su naive. Se
+usan bloques, no remuestreo independiente por día, porque los errores de
+pronóstico a $h$ días se solapan entre fechas consecutivas (el target de hoy
+y el de mañana comparten $h-1$ retornos diarios) — un bootstrap sin bloques
+subestimaría el error estándar.
+
+**Tabla 5.9.** Variación de RMSE vs. naive e intervalo de confianza 95%
+(bootstrap de bloques, $N=294$ en los 27 casos) por modelo y horizonte.
+
+| Modelo | $h$ | Var. vs. naive | IC 95% | Excluye 0 |
+|---|---|---:|---|---|
+| ARIMA/SARIMA | 1 | -0,06% | [-0,82%, +0,83%] | No |
+| ARIMA/SARIMA | 3 | +0,06% | [-0,48%, +0,81%] | No |
+| ARIMA/SARIMA | 5 | -0,12% | [-0,48%, +0,47%] | No |
+| SVM | 1 | +0,47% | [-0,78%, +1,88%] | No |
+| SVM | 3 | +0,32% | [-2,42%, +3,87%] | No |
+| SVM | 5 | +2,68% | [-3,08%, +11,98%] | No |
+| Random Forest | 1 | -0,12% | [-1,61%, +1,15%] | No |
+| Random Forest | 3 | +2,81% | [-1,66%, +7,80%] | No |
+| Random Forest | 5 | +3,50% | [-3,03%, +13,28%] | No |
+| XGBoost | 1 | +2,80% | [-2,15%, +8,55%] | No |
+| XGBoost | 3 | +8,47% | [-0,71%, +16,92%] | No |
+| XGBoost | 5 | +5,84% | [+0,03%, +12,11%] | **Sí** |
+| LightGBM | 1 | +4,08% | [-0,93%, +8,66%] | No |
+| LightGBM | 3 | +6,37% | [-0,82%, +11,69%] | No |
+| LightGBM | 5 | +5,85% | [-0,18%, +10,11%] | No |
+| LSTM | 1 | +1,04% | [-1,61%, +4,00%] | No |
+| LSTM | 3 | +0,47% | [-3,50%, +5,57%] | No |
+| LSTM | 5 | +1,57% | [-3,54%, +8,99%] | No |
+| GRU | 1 | +1,84% | [-1,10%, +4,89%] | No |
+| GRU | 3 | +3,61% | [-0,86%, +9,07%] | No |
+| GRU | 5 | +5,20% | [-0,46%, +13,30%] | No |
+| CNN-LSTM | 1 | +2,14% | [+0,31%, +4,58%] | **Sí** |
+| CNN-LSTM | 3 | +2,19% | [-1,02%, +6,28%] | No |
+| CNN-LSTM | 5 | +1,04% | [-2,41%, +5,78%] | No |
+| Transformer encoder | 1 | +2,50% | [+0,36%, +4,99%] | **Sí** |
+| Transformer encoder | 3 | +6,15% | [+0,92%, +11,58%] | **Sí** |
+| Transformer encoder | 5 | +5,41% | [-0,57%, +12,78%] | No |
+
+**Cada uno de estos 27 intervalos es individual/marginal**: cubre al 95% la
+diferencia de esa combinación (modelo, horizonte) tomada de forma aislada,
+no una región de confianza conjunta sobre las 27 a la vez. Con esa
+aclaración, el resultado se lee así: **0 de 27 combinaciones muestran una
+mejora significativa sobre el naive** — las pequeñas "mejoras" puntuales de
+ARIMA/SARIMA y Random Forest (todas menores a 0,4%) tienen intervalos que
+incluyen el cero, compatibles con variabilidad muestral pura. **4 de 27 sí
+resultan significativamente peores que el naive** (XGBoost $h=5$, CNN-LSTM
+$h=1$, Transformer encoder $h=1$ y $h=3$) — el único efecto detectable en
+toda la batería va en contra del modelo, nunca a favor. Con 27
+pruebas marginales sin corrección por comparaciones múltiples, sería
+esperable encontrar 1-2 falsos positivos por azar de haber una verdadera
+diferencia nula en todos los casos; no se encontró ninguno del lado de la
+mejora.
+
+Adicionalmente, se verificó la estabilidad temporal de estos resultados
+dividiendo el conjunto de validación en dos mitades cronológicas: varios
+modelos y horizontes (Random Forest, XGBoost, LightGBM y GRU en $h=3$/$h=5$,
+en particular) muestran un RMSE notablemente mayor en la segunda mitad —
+coincide con un tramo de mayor volatilidad del índice dentro del período de
+validación, no con que el resultado dependa de un puñado aislado de
+jornadas extremas. El detalle completo, con RMSE/MAE absolutos y la apertura
+por mitad para los 27 casos, está en
+`docs/decisions/punto9_incertidumbre_nov2026.md` y
+`results/punto9_bootstrap/bootstrap_ci_summary.parquet`.
+
 **Implicancia para la Fase 5 del proyecto (comparación y selección de modelo
-final):** **corregido (4-nov-2026, Punto 10 del feedback de los directores)** — la
-formulación original de este párrafo afirmaba que "un ensamble no puede generar
-señal que no está presente en sus modelos de entrada", como una imposibilidad
-teórica. Eso no es correcto: una combinación de modelos puede reducir el error
-de pronóstico incluso si ninguno de sus integrantes supera individualmente al
-naive, siempre que sus errores no estén perfectamente correlacionados entre sí
-—es el mismo principio de reducción de varianza que sostiene a Random Forest o
-a cualquier método de ensamble (sección 3.3.4)—. La decisión correcta de
-encuadrar es de **alcance y costo**, no de imposibilidad: desarrollar y validar
-un ensamble (correlación de errores entre los nueve modelos de dirección, peso
-óptimo o *stacking*, validación sin fuga adicional) es un trabajo no trivial
-que, dado que ninguno de los modelos de entrada individualmente supera al naive
-de forma significativa (sección 5.4.1), tiene un retorno esperado incierto
-frente a su costo. Esto sigue cambiando el alcance esperable de la Fase 5
-respecto de lo previsto originalmente en el Plan de Trabajo Final (que preveía
-desarrollo de ensamble y selección de un modelo ganador), pero la redefinición
-debe documentarse como una decisión de priorización, no como una conclusión
-que se desprenda necesariamente de los resultados de Bloque 2. Es, al momento
-de escribir este capítulo, un punto todavía abierto a discutir con la
-dirección.
+final):** una combinación de modelos puede reducir el error de pronóstico
+incluso si ninguno de sus integrantes supera individualmente al naive,
+siempre que sus errores no estén perfectamente correlacionados entre sí —es
+el mismo principio de reducción de varianza que sostiene a Random Forest o a
+cualquier método de ensamble (sección 3.3.4)—, así que un ensamble **no se
+descarta por imposibilidad teórica**. Queda, sí, como una alternativa
+metodológicamente válida que **se deja fuera del alcance de este trabajo**,
+cuyo objetivo se circunscribe al desempeño predictivo de los modelos
+individuales (sección 1.2). Esto redefine el alcance previsto originalmente
+en el Plan de Trabajo Final para esta fase (que incluía desarrollo de
+ensamble y selección de un modelo ganador) como una decisión de alcance, no
+como una conclusión que se desprenda de los resultados de Bloque 2.
 
 ---
 

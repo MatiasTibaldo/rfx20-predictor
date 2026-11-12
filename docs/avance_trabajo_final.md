@@ -384,21 +384,31 @@ como pendientes en la sección 7.
 una sola vez sobre el `log_return` completo de train: 288 candidatos, no
 estacionales y estacionales con periodicidad semanal) del walk-forward de evaluación
 (reestimación diaria de coeficientes con el orden ya fijo, ventana expansiva sobre el
-split de validación, 294/294 refits exitosos). El orden ganador por AIC fue
-**(0,0,0), sin componente estacional**: ningún candidato con estructura
-autorregresiva, de media móvil o estacional superó a la ausencia total de estructura.
-Con ese orden, y sin término de tendencia, el pronóstico puntual del modelo es
-matemáticamente cero en cualquier horizonte — el único parámetro estimado es la
-varianza del error (`sigma2 = 0.0045`).
+split de validación, 294/294 refits exitosos).
 
-El diagnóstico estadístico del modelo ajustado (test de Jarque-Bera, asimetría de
--23,93, curtosis de 821, test de heterocedasticidad) rechaza con fuerza la
-normalidad de los residuos y la varianza constante — evidencia que debe declararse
-explícitamente en la sección de metodología de la tesis, dado que ARIMA (y varios
-modelos posteriores) asumen errores gaussianos. El rechazo del supuesto de varianza
-constante es, además, la motivación metodológica concreta para ajustar GARCH a
-continuación: son preguntas distintas (media condicional vs. varianza condicional)
-sobre la misma serie. Ver `docs/decisions/arima_baseline_track_a.md`.
+**Corregido (6-nov-2026):** el orden, las cifras y el diagnóstico de esta
+sección correspondían a una versión de los datos previa a las correcciones
+de los Puntos 2 y 3 del feedback de los directores (continuidad de base y
+target acumulado) — quedaron desactualizados sin que nadie lo notara. El
+orden ganador por AIC, sobre los datos ya corregidos, es **(0,0,1), un MA(1)**
+(AIC=-6996,37) — no (0,0,0): existe un término de media móvil de un paso, de
+magnitud pequeña, por lo que el pronóstico **no** es exactamente cero en
+ningún horizonte (aunque sí muy cercano al naive, especialmente en h=3/h=5,
+donde el MA(1) no tiene memoria). El desvío estándar del retorno diario en
+train es 2,93% (no 6,7%, cifra de la versión de datos sin corregir).
+
+El diagnóstico estadístico sobre la serie de train, recalculado sobre los
+datos ya corregidos: Jarque-Bera rechaza con fuerza la normalidad (asimetría
+≈-1,17, no -23,93; curtosis muy por encima de 3 — la cifra de 821 también
+correspondía a los datos sin corregir, específicamente al período
+corrompido de sep-2019 ya resuelto); Ljung-Box sobre el primer retardo
+rechaza la ausencia de autocorrelación (stat=6,42, p=0,011) — consistente
+con el MA(1) que elige el AIC; y un test tipo ARCH-LM rechaza con fuerza la
+varianza constante (stat=15,66, p<0,001). El rechazo de varianza constante
+es la motivación metodológica concreta para ajustar GARCH a continuación:
+son preguntas distintas (media condicional vs. varianza condicional) sobre
+la misma serie. Ver `docs/decisions/arima_baseline_track_a.md` (todavía cita
+los valores viejos, pendiente de actualizar aparte).
 
 **GARCH.** Dado que ARIMA no encontró estructura en la media condicional, se ajustó
 un GARCH de media cero directamente sobre `log_return`. Una comparación experimental
@@ -445,10 +455,13 @@ corregido según 4.1):**
 | EWMA (λ=0,94, benchmark) | 3 | 0,0077714 | 0,0076656 | +1,38% | -4,844 |
 | EWMA (λ=0,94, benchmark) | 5 | 0,0135442 | 0,0132549 | +2,18% | -4,288 |
 
-Ninguno de los tres métodos de volatilidad (naive, GARCH, EWMA) mejora sobre los
-otros dos en ambas métricas — EWMA, que no tiene reversión a la media en su
-pronóstico, queda peor que GARCH, que sí la tiene (α+β=0,858), consistente con un
-mercado donde la volatilidad revierte relativamente rápido. Se verificó
+**[Explicitado 6-nov-2026]: GARCH supera a EWMA en esta comparación, pero la
+referencia de varianza constante (el naive) sigue siendo la de mejor desempeño
+de los tres.** Ninguno de los tres métodos de volatilidad (naive, GARCH, EWMA)
+mejora sobre los otros dos en ambas métricas — EWMA, que no tiene reversión a
+la media en su pronóstico, queda peor que GARCH, que sí la tiene (α+β=0,858),
+consistente con un mercado donde la volatilidad revierte relativamente rápido.
+Se verificó
 adicionalmente que la comparación de GARCH no depende de una definición
 particularmente injusta del naive: un naive alternativo con la varianza calculada
 sobre train winsorizado (recorte 1%/99%, para reducir la sensibilidad a outliers)
@@ -735,6 +748,15 @@ distinto de 50% (test binomial, p-valor mínimo 0,07). Esto aporta evidencia pro
 de la dimensión de dirección, independiente del RMSE. Ver
 `scripts/punto7_hitrate.py` y `docs/decisions/punto7_separar_conclusiones_nov2026.md`.
 
+**[Agregado 6-nov-2026, seguimiento del director]**: se sumó un segundo
+benchmark de dirección, "mayoría de train" (siempre predecir el signo más
+frecuente del retorno acumulado observado en train), porque el balance de
+subas/bajas no es 50/50 y crece con el horizonte (55,8%/58,0%/59,5% de días
+positivos en train para h=1/3/5). Este benchmark sin entrenamiento queda en
+línea con, o por encima de, varios de los 9 modelos entrenados — ninguno
+anticipa el signo por encima de lo que ya anticipa el sesgo histórico simple
+de la serie.
+
 Si se busca encuadrar el resultado en la literatura de eficiencia de mercados, el
 encuadre correcto es el de la **forma semifuerte**, no la débil (corregido
 4-nov-2026): la forma débil se restringe a precios y volúmenes pasados, mientras que
@@ -745,21 +767,18 @@ lectura posible del resultado, no como una conclusión que el diseño experiment
 esté en condiciones de demostrar.
 
 **Implicancia directa para la Fase 5 (Bloque 3, comparación y selección):**
-**corregido (4-nov-2026, Punto 10 del feedback de los directores)** — esta
-sección afirmaba que "un ensamble no puede generar señal que no está presente
-en sus modelos de entrada", como imposibilidad teórica. No es correcto: una
+**simplificado 6-nov-2026, Punto 10 del feedback de los directores** — una
 combinación de modelos puede reducir el error de pronóstico aunque ninguno de
 sus integrantes supere individualmente al naive, si sus errores no están
-perfectamente correlacionados entre sí. El encuadre correcto es de **alcance y
-costo**: desarrollar y validar un ensamble sobre los nueve modelos de
-dirección es trabajo no trivial, con retorno esperado incierto dado que
-ninguno individualmente supera al naive de forma significativa (Punto 9 del
-feedback, intervalos de confianza por bootstrap de bloques). Esto sigue
-cambiando el alcance esperable de la Fase 5 respecto de lo previsto en el Plan
-de Trabajo Final (que preveía desarrollo de ensamble y selección de un modelo
-ganador), y debe discutirse explícitamente con la dirección antes de iniciar
-el desarrollo de esa fase (ver sección 7, punto 8) — pero como decisión de
-priorización, no como conclusión forzada por los resultados. Ver
+perfectamente correlacionados entre sí, así que un ensamble no se descarta por
+imposibilidad teórica. Queda como una alternativa metodológicamente válida que
+**se deja fuera del alcance de este trabajo**, cuyo objetivo se circunscribe
+al desempeño predictivo (sección 1.2 de la tesis) — una decisión de alcance,
+no una conclusión forzada por los resultados de Bloque 2. Esto redefine lo
+previsto en el Plan de Trabajo Final para esta fase (que incluía desarrollo de
+ensamble y selección de un modelo ganador); debe discutirse explícitamente con
+la dirección antes de iniciar el desarrollo de esa fase (ver sección 7, punto
+8). Ver
 `docs/decisions/track_a_b_sintesis_direccion_volatilidad.md` para el detalle
 completo de esta síntesis.
 
