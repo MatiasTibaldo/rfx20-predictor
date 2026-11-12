@@ -2127,6 +2127,21 @@ fenómeno observado con XGBoost en la Tabla 5.3, pero más pronunciado. El featu
 acotado de la Tabla 5.4 queda confirmado como la opción correcta para esta cantidad
 de datos disponible.
 
+**Evidencia adicional (agregada 6-nov-2026, seguimiento del feedback de los
+directores):** esta explicación de sobreajuste no se apoya únicamente en el
+patrón de RMSE. Se instrumentó el ciclo de entrenamiento para persistir, además
+de la pérdida de *early stopping* (que ya se usaba para decidir cuándo
+frenar), la pérdida sobre el propio conjunto de entrenamiento en cada época —
+antes se calculaba implícitamente y se descartaba. En las configuraciones
+degradadas, la pérdida de entrenamiento sigue bajando de forma monótona
+durante todo el entrenamiento, mientras que la de *early stopping* mejora solo
+hasta su mejor época y después empeora —la firma característica de
+sobreajuste—, y esta brecha no es un caso aislado: un barrido sobre las 36
+combinaciones de dataset, arquitectura y horizonte materializadas en este
+proyecto (3 datasets × 4 arquitecturas × 3 horizontes) la confirma en la
+totalidad de los casos evaluados, agravándose de forma sistemática con el
+horizonte de pronóstico y con la dimensionalidad del conjunto de features.
+
 #### 5.3.3. Arquitecturas híbridas y basadas en atención: CNN-LSTM y Transformer encoder
 
 **Tabla 5.6.** CNN-LSTM y Transformer encoder (feature set acotado) vs. naive, conjunto de

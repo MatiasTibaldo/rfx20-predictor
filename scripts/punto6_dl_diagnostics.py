@@ -60,7 +60,7 @@ def run_one(label, dataset_name, model_cls, model_kwargs, horizon, lookback, see
     scaler, (X_fit, X_earlystop) = scale_sequences(fit_seq.X, earlystop_seq.X)
 
     dl_common.RANDOM_STATE = seed  # monkeypatch: train_with_early_stopping reads the module global
-    model, best_epoch, earlystop_loss, history = dl_common.train_with_early_stopping(
+    model, best_epoch, earlystop_loss, history, train_history = dl_common.train_with_early_stopping(
         lambda: model_cls(input_size=len(feature_cols), **model_kwargs),
         X_fit,
         fit_seq.y,
@@ -85,10 +85,14 @@ def run_one(label, dataset_name, model_cls, model_kwargs, horizon, lookback, see
         "earlystop_loss_first": history[0],
         "earlystop_loss_best": earlystop_loss,
         "earlystop_loss_last": history[-1],
+        "train_loss_first": train_history[0],
+        "train_loss_best_epoch": train_history[best_epoch],
+        "train_loss_last": train_history[-1],
         "val_rmse": rmse,
         "y_pred_mean": float(y_pred.mean()),
         "y_pred_std": float(y_pred.std()),
         "history": history,
+        "train_history": train_history,
     }
 
 
@@ -103,7 +107,9 @@ def main():
             print(
                 f"  seed={seed}: best_epoch={r['best_epoch']}/{r['n_epochs_run']} "
                 f"earlystop_loss {r['earlystop_loss_first']:.5f} -> {r['earlystop_loss_best']:.5f} "
-                f"(last={r['earlystop_loss_last']:.5f})  val_rmse={r['val_rmse']:.5f}  "
+                f"(last={r['earlystop_loss_last']:.5f})  "
+                f"train_loss {r['train_loss_first']:.5f} -> {r['train_loss_best_epoch']:.5f} "
+                f"(last={r['train_loss_last']:.5f})  val_rmse={r['val_rmse']:.5f}  "
                 f"y_pred(mean={r['y_pred_mean']:+.4f}, std={r['y_pred_std']:.4f})"
             )
 

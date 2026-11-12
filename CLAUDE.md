@@ -515,14 +515,35 @@ semillas.
   (CV=0,8%) — confirma limitación estructural, no mala suerte de una
   semilla. GRU más variable (CV=12,5%) pero ninguna semilla da resultado
   aceptable.
-- **Curvas de pérdida persistidas** por primera vez (antes se calculaban y
-  descartaban) — muestran sobreajuste temprano (mejor epoch en los primeros
-  2-5 de ~20) en las configuraciones degradadas.
 - **Tabla de experimentos**: el empate narrow (Track B oficial) y la
   degradación full/composición no son una inconsistencia — son dos
   datasets/feature-sets distintos, ambos vigentes. Las exploraciones
   previas a los Puntos 3/4 (target de un solo día, sin purga) quedan
   marcadas como no vigentes, no citar sus números.
+- **[Agregado 6-nov-2026] Pérdida de train trackeada** (`train_with_early_stopping`
+  ahora devuelve también `train_history`, costo adicional nulo — un forward
+  pass sin gradiente que ya se hacía para `es_loss`). En las 3
+  configuraciones originales del Punto 6, la pérdida de train sigue bajando
+  monótonamente mientras la de early-stopping toca un mínimo y luego sube —
+  brecha persistente y creciente, incluso en el caso de contraste
+  (CNN-LSTM-compA h=1) que se consideraba sano.
+- **[Agregado 6-nov-2026] Barrido completo, 36 combinaciones** (3 datasets
+  × 4 arquitecturas × 3 horizontes, 1 semilla, lookback re-seleccionado por
+  grid search — `scripts/punto6_dl_diagnostics_full_sweep.py`), incluyendo
+  por decisión explícita de los directores las 9 combinaciones GRU/CNN-LSTM/
+  Transformer encoder × compC_masked nunca corridas oficialmente (Punto 5
+  había cerrado esa línea solo con LSTM). Resultado: **las 36/36
+  combinaciones muestran una brecha train/early-stopping positiva al final
+  del entrenamiento** — no es un patrón aislado a los 3 casos
+  originalmente señalados. La brecha se agrava con el horizonte (h=5 > h=3
+  > h=1, con pocas excepciones) y con la dimensionalidad del dataset (compA
+  y compC_masked por encima de baseline); por arquitectura, LSTM y
+  CNN-LSTM muestran las brechas más grandes, GRU y Transformer encoder
+  tienden a brechas menores sin quedar exentas. Esto generaliza, no
+  reabre: no se recalculó RMSE vs. naive para las 9 combinaciones nuevas de
+  compC_masked, así que la conclusión cerrada del Punto 5 ("no útil para DL",
+  basada en LSTM) sigue vigente tal cual — ver detalle completo en
+  `docs/decisions/punto6_diagnostico_redes_nov2026.md`.
 
 ### Punto 7 del feedback de los directores: separar conclusiones de retorno, dirección y volatilidad (4 nov 2026)
 

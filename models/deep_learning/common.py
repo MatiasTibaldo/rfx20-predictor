@@ -24,7 +24,7 @@ values, which the project forbids).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import polars as pl
@@ -229,6 +229,7 @@ class TrainResult:
     best_epoch: int
     earlystop_loss: float
     history: list[float]
+    train_history: list[float] = field(default_factory=list)
 
 
 def train_with_early_stopping(
@@ -241,12 +242,19 @@ def train_with_early_stopping(
     max_epochs: int = 200,
     patience: int = 15,
     batch_size: int = 64,
-) -> tuple[nn.Module, int, float, list[float]]:
+) -> tuple[nn.Module, int, float, list[float], list[float]]:
     """Train model_factory() with early stopping on (X_earlystop, y_earlystop).
 
     Seeds torch before construction/training for reproducibility (CLAUDE.md
     requires it for model code). Returns the best-epoch model state (lowest
     early-stopping loss), not the last epoch's.
+
+    Also tracks the loss on the full fit set (`X_fit`/`y_fit`) at the same
+    point each epoch where the early-stopping loss is computed — a second
+    forward pass without gradient, no extra training cost. A persistent gap
+    between the two curves (train loss still falling while early-stopping
+    loss plateaus or rises) is the standard overfitting signature, requested
+    as supporting evidence (Punto 6 del feedback de los directores, 6-nov-2026).
     """
     torch.manual_seed(RANDOM_STATE)
     model = model_factory()
@@ -259,6 +267,8 @@ def train_with_early_stopping(
         train_ds, batch_size=batch_size, shuffle=True, generator=loader_generator
     )
 
+    X_fit_t = torch.from_numpy(X_fit)
+    y_fit_t = torch.from_numpy(y_fit)
     X_es_t = torch.from_numpy(X_earlystop)
     y_es_t = torch.from_numpy(y_earlystop)
 
@@ -267,6 +277,7 @@ def train_with_early_stopping(
     best_epoch = 0
     epochs_without_improvement = 0
     history: list[float] = []
+    train_history: list[float] = []
 
     for epoch in range(max_epochs):
         model.train()
@@ -281,7 +292,10 @@ def train_with_early_stopping(
         with torch.no_grad():
             es_pred = model(X_es_t).squeeze(-1)
             es_loss = loss_fn(es_pred, y_es_t).item()
+            train_pred = model(X_fit_t).squeeze(-1)
+            train_loss = loss_fn(train_pred, y_fit_t).item()
         history.append(es_loss)
+        train_history.append(train_loss)
 
         if es_loss < best_loss - 1e-8:
             best_loss = es_loss
@@ -294,7 +308,7 @@ def train_with_early_stopping(
                 break
 
     model.load_state_dict(best_state)
-    return model, best_epoch, best_loss, history
+    return model, best_epoch, best_loss, history, train_history
 
 
 def select_lookback(
@@ -330,7 +344,7 @@ def select_lookback(
         fit_seq, earlystop_seq = chronological_earlystop_split(seqs["train"])
         scaler, (X_fit, X_earlystop) = scale_sequences(fit_seq.X, earlystop_seq.X)
 
-        model, best_epoch, earlystop_loss, history = train_with_early_stopping(
+        model, best_epoch, earlystop_loss, history, train_history = train_with_early_stopping(
             lambda: model_factory_for_input_size(len(feature_cols)),
             X_fit,
             fit_seq.y,
@@ -350,6 +364,7 @@ def select_lookback(
                 best_epoch=best_epoch,
                 earlystop_loss=earlystop_loss,
                 history=history,
+                train_history=train_history,
             )
 
     return best

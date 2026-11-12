@@ -53,13 +53,14 @@ def test_train_with_early_stopping_is_reproducible(regressor_cls):
         # que sea reproducible.
         return regressor_cls(input_size=N_FEATURES)
 
-    _, best_epoch_a, loss_a, history_a = train_with_early_stopping(
+    _, best_epoch_a, loss_a, history_a, train_history_a = train_with_early_stopping(
         model_factory, X_fit, y_fit, X_earlystop, y_earlystop, max_epochs=10, patience=10
     )
-    _, best_epoch_b, loss_b, history_b = train_with_early_stopping(
+    _, best_epoch_b, loss_b, history_b, train_history_b = train_with_early_stopping(
         model_factory, X_fit, y_fit, X_earlystop, y_earlystop, max_epochs=10, patience=10
     )
 
     assert best_epoch_a == best_epoch_b
     assert loss_a == loss_b
     assert history_a == history_b
+    assert train_history_a == train_history_b

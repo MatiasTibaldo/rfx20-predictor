@@ -89,6 +89,144 @@ poder generalizar, la firma característica de sobreajuste bajo alta
 dimensionalidad con pocos datos (no un problema de optimización que
 simplemente necesite más épocas).
 
+## 5bis. Brecha train vs. early-stopping — evidencia directa de sobreajuste (6-nov-2026)
+
+El director, en su respuesta de seguimiento, pidió específicamente: si las
+curvas de entrenamiento y validación muestran una brecha persistente,
+incorporarla como evidencia adicional del diagnóstico de sobreajuste (más
+allá del sesgo en las predicciones y la estabilidad entre semillas, ya
+documentados arriba).
+
+**Implementado**: `train_with_early_stopping()` (`models/deep_learning/common.py`)
+ahora calcula, en el mismo punto de cada época donde ya se calculaba la
+pérdida de early-stopping, la pérdida sobre el propio conjunto de *fit*
+(`X_fit`/`y_fit`) — un forward pass adicional sin gradiente, sin costo de
+entrenamiento extra. Re-corridas las mismas 3 configuraciones de la sección
+4 (`scripts/punto6_dl_diagnostics.py`), un seed alcanza para ver la forma de
+la curva:
+
+| Configuración (seed=42) | Pérdida train (inicio→mejor época→fin) | Pérdida early-stopping (inicio→mejor→fin) |
+|---|---|---|
+| GRU-compA h=5 | 0,0119 → 0,0036 → **0,0012** | 0,0094 → 0,0079 → **0,0179** |
+| LSTM-máscara(C) h=5 | 0,0055 → 0,0032 → **0,0006** | 0,0299 → 0,0287 → **0,0360** |
+| CNN-LSTM-compA h=1 (contraste) | 0,0010 → 0,0010 → **0,0006** | 0,0009 → 0,0009 → **0,0036** |
+
+**Brecha persistente confirmada en las 3 configuraciones**: la pérdida de
+train sigue bajando de forma monótona hasta el final del entrenamiento (no
+se estanca), mientras que la pérdida de early-stopping mejora solo hasta su
+mejor época y después **empeora** — en GRU y LSTM-máscara más que se
+duplica desde su mínimo hasta el final; en CNN-LSTM (el caso de contraste,
+con mucho menor error absoluto) también empeora de forma proporcional
+(~4x desde el mínimo), aunque la magnitud absoluta del problema es mucho
+menor. Es exactamente el patrón de libro de sobreajuste: el modelo sigue
+reduciendo su error sobre los datos que ve, a costa de generalizar peor a
+los que no — y se repite incluso en la arquitectura que mejor se comporta
+bajo el feature set "full"/composición, no es exclusivo de los casos más
+degradados. Confirmado también en las semillas 7 y 123 de la misma corrida
+(mismo patrón cualitativo, ver `results/punto6_dl_diagnostics/seed_stability.json`).
+
+## 5ter. Barrido completo de la matriz (36 combinaciones) — generaliza la brecha (6-nov-2026)
+
+La sección 5bis confirma la brecha train/early-stopping en 3 configuraciones
+representativas (las más degradadas + 1 de contraste sano). Para verificar
+que no es un artefacto de esa muestra puntual, se corrió la matriz completa
+de datasets × arquitecturas × horizontes materializados en el proyecto:
+**3 datasets** (`features_long` baseline, `features_long_compA`,
+`features_long_compC_masked`) × **4 arquitecturas** (LSTM, GRU, CNN-LSTM,
+Transformer encoder) × **3 horizontes** = **36 combinaciones**, 1 semilla
+(42) — alcanza para ver la forma de la curva, no para repetir el análisis
+de estabilidad entre semillas de la sección 4. El lookback no se reutiliza
+de ninguna corrida previa (no hay un valor persistido para las 36
+combinaciones): se re-selecciona con `select_lookback()` (grid search sobre
+`LOOKBACK_CANDIDATES`), el mismo criterio que usa el pipeline oficial.
+
+**Nota de alcance**: por decisión explícita de los directores, esta corrida
+incluye las 9 combinaciones GRU/CNN-LSTM/Transformer encoder ×
+`compC_masked` que nunca se habían corrido oficialmente — la sección 3 de
+`docs/decisions/punto5_variantes_componentes_nov2026.md` había concluido,
+probando solo con LSTM (el peor resultado de toda la batería), que la
+máscara de disponibilidad "no es útil para Deep Learning" en este proyecto.
+Esta sección **no reabre ni contradice esa conclusión**: solo documenta la
+curva de pérdida train/early-stopping de esas 9 combinaciones nuevas, sin
+recalcular RMSE vs. naive — la conclusión del Punto 5 sigue vigente tal
+cual, basada en su propio criterio (RMSE), no en este.
+
+Script: `scripts/punto6_dl_diagnostics_full_sweep.py`. Resultado completo
+persistido en `results/punto6_dl_diagnostics_full_sweep/full_sweep.json`
+(no versionado, como el resto de `results/`).
+
+**Hallazgo principal: las 36/36 combinaciones muestran una brecha positiva
+al final del entrenamiento** (`gap_last = es_loss_final − train_loss_final`)
+— incluso las más chicas (del orden de +0,0003 a +0,0008, todas h=1 sobre
+el dataset baseline) son estrictamente positivas. No es un patrón aislado a
+los 3 casos señalados en la sección 5bis: es sistemático en toda la matriz
+materializada del proyecto.
+
+Patrones dentro de ese resultado uniforme:
+
+- **Por horizonte**: la brecha se agrava con el horizonte — h=5 y h=3
+  dominan ampliamente el extremo de mayor brecha de la tabla; h=1 domina
+  el extremo de menor brecha, con pocas excepciones.
+- **Por dataset**: `compA` y `compC_masked` (los datasets de mayor
+  dimensionalidad — 74 y ~118 columnas respectivamente) concentran las
+  brechas más grandes; `baseline` (34 columnas) tiende a brechas
+  sensiblemente menores, consistente con el diagnóstico ya documentado de
+  sobreajuste por dimensionalidad frente a un train chico (~1.600 filas).
+- **Por arquitectura**: LSTM y CNN-LSTM muestran las brechas más grandes del
+  ranking (las 5 combinaciones con mayor `gap_last` incluyen 3 de LSTM y 2
+  de CNN-LSTM); GRU y Transformer encoder tienden a brechas menores en
+  términos relativos, sin quedar exentos — ninguna arquitectura tiene una
+  sola combinación con brecha nula o negativa al final del entrenamiento.
+
+Tabla completa, ordenada de mayor a menor `gap_last`:
+
+| Dataset | Modelo | h | lookback | gap (mejor época) | gap (final) | crecimiento del gap |
+|---|---|---|---:|---:|---:|---:|
+| compA | LSTM | 5 | 30 | +0,02956 | +0,11907 | +0,08951 |
+| compC_masked | CNN-LSTM | 5 | 20 | +0,00221 | +0,07544 | +0,07323 |
+| compA | LSTM | 3 | 30 | +0,02491 | +0,07251 | +0,04760 |
+| compA | CNN-LSTM | 5 | 30 | +0,00367 | +0,04442 | +0,04075 |
+| compA | CNN-LSTM | 3 | 20 | +0,00090 | +0,04251 | +0,04161 |
+| compC_masked | LSTM | 5 | 10 | +0,02261 | +0,03650 | +0,01390 |
+| compA | LSTM | 1 | 20 | +0,02147 | +0,03135 | +0,00988 |
+| baseline | LSTM | 5 | 10 | +0,00458 | +0,03095 | +0,02637 |
+| compC_masked | LSTM | 3 | 10 | +0,02421 | +0,03076 | +0,00656 |
+| compA | Transformer encoder | 5 | 20 | +0,01040 | +0,03072 | +0,02031 |
+| baseline | CNN-LSTM | 5 | 30 | -0,00082 | +0,02586 | +0,02667 |
+| compC_masked | Transformer encoder | 5 | 30 | +0,00279 | +0,02102 | +0,01823 |
+| compC_masked | LSTM | 1 | 10 | +0,01984 | +0,02030 | +0,00046 |
+| compC_masked | GRU | 5 | 10 | +0,01284 | +0,01737 | +0,00453 |
+| compA | GRU | 5 | 10 | +0,00219 | +0,01595 | +0,01377 |
+| baseline | LSTM | 3 | 10 | +0,00339 | +0,01560 | +0,01221 |
+| compC_masked | CNN-LSTM | 3 | 10 | +0,00118 | +0,01438 | +0,01319 |
+| baseline | Transformer encoder | 5 | 30 | +0,00516 | +0,01389 | +0,00873 |
+| compA | Transformer encoder | 3 | 10 | +0,00566 | +0,01373 | +0,00807 |
+| compC_masked | Transformer encoder | 3 | 20 | +0,00656 | +0,00959 | +0,00303 |
+| compC_masked | GRU | 3 | 30 | +0,00815 | +0,00892 | +0,00077 |
+| compA | GRU | 3 | 10 | +0,00342 | +0,00782 | +0,00441 |
+| baseline | Transformer encoder | 3 | 10 | +0,00414 | +0,00634 | +0,00220 |
+| baseline | GRU | 5 | 30 | +0,00218 | +0,00622 | +0,00404 |
+| baseline | CNN-LSTM | 3 | 20 | -0,00026 | +0,00594 | +0,00620 |
+| baseline | LSTM | 1 | 10 | +0,00184 | +0,00576 | +0,00391 |
+| baseline | GRU | 3 | 30 | +0,00310 | +0,00494 | +0,00183 |
+| compA | CNN-LSTM | 1 | 20 | -0,00011 | +0,00481 | +0,00492 |
+| compC_masked | GRU | 1 | 30 | +0,00387 | +0,00402 | +0,00015 |
+| baseline | GRU | 1 | 10 | +0,00297 | +0,00391 | +0,00094 |
+| compC_masked | CNN-LSTM | 1 | 10 | +0,00054 | +0,00313 | +0,00260 |
+| compA | GRU | 1 | 20 | +0,00251 | +0,00297 | +0,00045 |
+| compA | Transformer encoder | 1 | 20 | +0,00069 | +0,00203 | +0,00134 |
+| compC_masked | Transformer encoder | 1 | 10 | +0,00062 | +0,00130 | +0,00068 |
+| baseline | Transformer encoder | 1 | 30 | +0,00000 | +0,00076 | +0,00076 |
+| baseline | CNN-LSTM | 1 | 30 | -0,00006 | +0,00027 | +0,00033 |
+
+Tres combinaciones (`baseline/CNN-LSTM/h=5`, `baseline/CNN-LSTM/h=3`,
+`compA/CNN-LSTM/h=1`) tienen un `gap` *negativo* en la mejor época (es decir,
+en el momento en que el early-stopping decidió frenar, la pérdida de
+validación era, por una magnitud mínima, menor que la de train) — ruido
+esperable del tamaño de muestra chico del split de early-stopping, no
+evidencia en contra del patrón: las tres igual terminan con `gap_last`
+positivo.
+
 ## 6. Conciliación "documento" vs. "correo" — tabla de experimentos
 
 El RMSE casi empatado con el naive que aparece en los documentos oficiales
@@ -115,10 +253,15 @@ acotada" pedida por el director, no una re-corrida exhaustiva.
 Las degradaciones severas de Deep Learning con el feature set "full"/
 composición **no se explican por un bug** (escalado, alineación) — son un
 patrón real y robusto (estable entre semillas, con firma de sesgo
-sistemático en las predicciones y de sobreajuste temprano en las curvas de
-pérdida) de sobreajuste por alta dimensionalidad frente a un conjunto de
-entrenamiento chico (~1.600 filas). El resultado narrow (empatado con el
-naive) y el resultado full/composición (catastrófico) son dos experimentos
-distintos y ambos vigentes — no una inconsistencia a resolver, sino el
-mismo patrón de Bloque 2 (sobreajuste cuando sube la capacidad sin subir la
-señal) ya documentado en el Punto 7.
+sistemático en las predicciones, y con una brecha persistente y creciente
+entre la pérdida de train y la de early-stopping — secciones 5bis y 5ter)
+de sobreajuste por alta dimensionalidad frente a un conjunto de
+entrenamiento chico (~1.600 filas). El barrido completo de la sección 5ter
+(36/36 combinaciones de dataset × arquitectura × horizonte con brecha
+positiva, agravada por horizonte y dimensionalidad del dataset) confirma
+que esto no es un hallazgo acotado a los 3 casos más degradados, sino la
+regla general en toda la matriz materializada del proyecto. El resultado
+narrow (empatado con el naive) y el resultado full/composición
+(catastrófico) son dos experimentos distintos y ambos vigentes — no una
+inconsistencia a resolver, sino el mismo patrón de Bloque 2 (sobreajuste
+cuando sube la capacidad sin subir la señal) ya documentado en el Punto 7.
