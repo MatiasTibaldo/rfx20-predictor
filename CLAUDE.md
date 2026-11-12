@@ -698,17 +698,29 @@ incertidumbre, no solo bajo la de remuestreo.
 
 ### Próximo paso (retomar acá)
 
-**[Actualizado 4-nov-2026] Los 10 puntos del feedback de los directores
-(oct-nov 2026) quedan cerrados** — ver las secciones "Punto 1" a "Punto 10"
-más arriba para el detalle completo de cada uno, y
-`docs/decisions/punto10_ajustes_documento_nov2026.md` sección 5 para el
-balance contra la hoja de ruta que proponen los directores. De esa hoja de
-ruta, el único paso que sigue pendiente es la **evaluación final sobre el
-conjunto de test reservado** (86 filas, 2026-04-20 → 2026-08-25, 100%
-out-of-sample, nunca tocado hasta ahora por diseño) — una única pasada, no
-iterativa, sobre el modelo o conjunto de modelos que se decida llevar a esa
-instancia. Antes de correrla: confirmar que estén disponibles todos los
-predictores necesarios para ese tramo (no solo el spot del índice, Punto 4).
+**[Actualizado 6-nov-2026] Los directores aprobaron avanzar a la evaluación
+final sobre el conjunto de test**, condicionado a revisar antes un protocolo
+escrito — ver `docs/decisions/ficha_protocolo_evaluacion_final.md` (detalle
+completo) y su versión resumida para mail. Pendiente: aprobación de los
+directores sobre la ficha (en particular la política de reentrenamiento
+ML/DL de la sección 3, dejada abierta a propósito) + generalizar
+`walk_forward_evaluate`/`walk_forward_evaluate_variance` (hoy hardcodeadas a
+"val") + conectar la evaluación sobre "test" en cada runner. Ninguno de
+estos 3 ítems está hecho todavía — no correr el test sin luz verde.
+
+**[Resuelto 6-nov-2026] Disponibilidad de predictores en el tramo de
+test**: confirmado contra la API de MatbaRofex en vivo — el gap de
+`implied_rate_next`/`term_spread_futures` (28/86 y 30/86 nulos) es un gap
+real de mercado, no se puede completar. De paso se encontró y corrigió un
+problema distinto: `data/raw/v1/rfx20_futures.parquet` no se había
+re-descargado desde el 21-ago-2026, así que las fechas de test 24 y 25 de
+agosto tenían un valor de tasa implícita arrastrado (stale) en vez del real
+— corregido re-descargando el crudo y regenerando en cadena `macro.parquet`,
+`features_long.parquet` y los 2 datasets de composición derivados (verificado
+por diff: solo esas 2 fechas, solo las 3 columnas de futuros, nada más se
+movió — ningún resultado ya reportado usa `test`, así que no afecta nada de
+lo publicado hasta ahora). Ver `docs/decisions/futures_implied_rate.md`
+sección "Nota (6-nov-2026)".
 
 Nota sobre el estado de Bloque 2: con GARCH perdiendo contra su naive en los
 3 horizontes (Punto 8) y ninguno de los 9 modelos de dirección mostrando una

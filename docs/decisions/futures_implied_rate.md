@@ -93,3 +93,24 @@ adelante) persisten nulos dispersos en `implied_rate_front`/`implied_rate_next`
 en días puntuales sin tasa implícita o sin segundo contrato simultáneo (ver
 sección "Front-month..." en `docs/decisions/macro_features_etapa2.md`) — no
 es exclusivamente un problema de cobertura pre-2020.
+
+## Nota (6-nov-2026): staleness detectada y corregida en el tramo de test
+
+Al preparar `docs/decisions/ficha_protocolo_evaluacion_final.md` (protocolo
+de evaluación final) se re-consultó la API en vivo y se encontraron dos
+cosas distintas:
+
+1. Los 28 nulos de `implied_rate_next` en el conjunto de test (mayo-agosto
+   2026) se re-verificaron contra la API fresca y **siguen sin segundo
+   contrato cotizando esos días** — gap real de mercado, confirmado, no una
+   limitación de cobertura de la ingesta.
+2. `data/raw/v1/rfx20_futures.parquet` no se había vuelto a descargar desde
+   el 21-ago-2026 (`to=2026-08-21` en la última ingesta). Como
+   `build_macro_features` alinea con `join_asof(strategy="backward")`, las
+   fechas de test 2026-08-24 y 2026-08-25 venían recibiendo el valor del
+   21-ago arrastrado, no el real de cada día — un problema de frescura de
+   datos, no un gap genuino. Se re-descargó el crudo (ahora hasta
+   2026-11-11) y se regeneraron `macro.parquet`, `features_long.parquet` y
+   los dos datasets de composición derivados, verificado por diff exacto
+   (solo esas 2 fechas, solo las 3 columnas de futuros, ningún otro dato
+   afectado).
