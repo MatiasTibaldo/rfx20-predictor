@@ -455,13 +455,19 @@ corregido según 4.1):**
 | EWMA (λ=0,94, benchmark) | 3 | 0,0077714 | 0,0076656 | +1,38% | -4,844 |
 | EWMA (λ=0,94, benchmark) | 5 | 0,0135442 | 0,0132549 | +2,18% | -4,288 |
 
-**[Explicitado 6-nov-2026]: GARCH supera a EWMA en esta comparación, pero la
-referencia de varianza constante (el naive) sigue siendo la de mejor desempeño
-de los tres.** Ninguno de los tres métodos de volatilidad (naive, GARCH, EWMA)
-mejora sobre los otros dos en ambas métricas — EWMA, que no tiene reversión a
-la media en su pronóstico, queda peor que GARCH, que sí la tiene (α+β=0,858),
-consistente con un mercado donde la volatilidad revierte relativamente rápido.
-Se verificó
+**[Corregido 6-nov-2026, seguimiento del director — la formulación anterior
+decía "GARCH supera a EWMA" sin distinguir métrica; es un resultado mixto]:
+en RMSE, GARCH supera a EWMA en los tres horizontes (+0,88/+1,03/+1,42% vs.
++1,10/+1,38/+2,18%); en QLIKE ocurre lo contrario, EWMA supera a GARCH en
+los tres horizontes (ver columna QLIKE arriba, menor/mejor para EWMA en los
+tres casos). La referencia de varianza constante (el naive) sigue siendo la
+de mejor desempeño de los tres, en ambas métricas.** EWMA no tiene reversión
+a la media en su pronóstico, mientras que GARCH sí la tiene (α+β=0,858) —
+consistente con un mercado donde la volatilidad revierte relativamente
+rápido, eso explica que EWMA acumule más error cuadrático (RMSE); que EWMA
+gane en QLIKE a pesar de eso indica que esta métrica pesa distinto los
+errores de cada modelo, no que un método domine al otro en términos
+absolutos. Se verificó
 adicionalmente que la comparación de GARCH no depende de una definición
 particularmente injusta del naive: un naive alternativo con la varianza calculada
 sobre train winsorizado (recorte 1%/99%, para reducir la sensibilidad a outliers)
@@ -508,25 +514,32 @@ se definió un protocolo único, compartido por los cuatro (`docs/decisions/ml_f
 
 | Modelo | Horizonte | RMSE | RMSE naive | Var. vs. naive |
 |---|---|---:|---:|---:|
-| SVM | 1 | 0,029695 | 0,029553 | +0,5% |
-| SVM | 3 | 0,029849 | 0,029531 | +1,1% |
-| SVM | 5 | 0,029789 | 0,029479 | +1,0% |
-| Random Forest | 1 | 0,029539 | 0,029553 | -0,0% |
-| Random Forest | 3 | 0,029694 | 0,029531 | +0,6% |
-| Random Forest | 5 | 0,029587 | 0,029479 | +0,4% |
-| XGBoost | 1 | 0,030607 | 0,029553 | +3,6% |
-| XGBoost | 3 | 0,029792 | 0,029531 | +0,9% |
-| XGBoost | 5 | 0,029655 | 0,029479 | +0,6% |
-| LightGBM | 1 | 0,030767 | 0,029553 | +4,1% |
-| LightGBM | 3 | 0,029550 | 0,029531 | +0,1% |
-| LightGBM | 5 | 0,029688 | 0,029479 | +0,7% |
+| SVM | 1 | 0,029692 | 0,029553 | +0,5% |
+| SVM | 3 | 0,052589 | 0,052421 | +0,3% |
+| SVM | 5 | 0,070400 | 0,068560 | +2,7% |
+| Random Forest | 1 | 0,029518 | 0,029553 | -0,1% |
+| Random Forest | 3 | 0,053894 | 0,052421 | +2,8% |
+| Random Forest | 5 | 0,070961 | 0,068560 | +3,5% |
+| XGBoost | 1 | 0,030381 | 0,029553 | +2,8% |
+| XGBoost | 3 | 0,056862 | 0,052421 | +8,5% |
+| XGBoost | 5 | 0,072565 | 0,068560 | +5,8% |
+| LightGBM | 1 | 0,030758 | 0,029553 | +4,1% |
+| LightGBM | 3 | 0,055759 | 0,052421 | +6,4% |
+| LightGBM | 5 | 0,072573 | 0,068560 | +5,9% |
 
-SVM y Random Forest quedan prácticamente empatados con el naive en los tres
-horizontes. XGBoost y LightGBM muestran una desviación algo mayor en h=1 (+3,6% y
-+4,1% de RMSE respectivamente) que se reduce a un empate virtual en h=3 y h=5 — un
-patrón compatible con sobreajuste leve sobre un dataset de tamaño moderado (~1.600
-filas de entrenamiento), más pronunciado en el horizonte más cercano y ruidoso, antes
-que con una degradación estructural del modelo. En ninguno de los cuatro modelos las
+**Corregido (6-nov-2026):** esta tabla tenía un naive de un solo día en h=3/h=5
+(quedó sin regenerar tras la corrección del target acumulado de la sección 4.1-bis
+del feedback); recalculada contra `results/punto9_bootstrap/bootstrap_ci_summary.parquet`.
+
+SVM queda el más cercano al naive en los tres horizontes, con su mayor desvío recién
+en h=5 (+2,7%). Random Forest está prácticamente empatado en h=1 (-0,1%) pero la
+brecha se amplía a +2,8% en h=3 y +3,5% en h=5. XGBoost y LightGBM muestran el
+patrón más marcado: ya se apartan en h=1 (+2,8% y +4,1%) y la brecha **crece, no se
+reduce**, hacia horizontes más largos (XGBoost peor en h=3, +8,5%; LightGBM hasta
++5,9% en h=5) — un patrón compatible con sobreajuste que se agrava con el horizonte
+sobre un dataset de tamaño moderado (~1.600 filas de entrenamiento), no con una
+degradación limitada al horizonte más cercano y ruidoso. En ninguno de los cuatro
+modelos las
 importancias por permutación resultan estables entre horizontes: ningún feature se
 repite consistentemente como el más relevante, lo que es más compatible con ruido de
 la búsqueda de hiperparámetros que con una señal genuina y estable.
@@ -562,17 +575,21 @@ arquitecturas evaluadas, difiere del de Track A ML en varios puntos deliberados:
 
 | Modelo | Horizonte | RMSE | RMSE naive | Var. vs. naive |
 |---|---|---:|---:|---:|
-| LSTM | 1 | 0,029803 | 0,029553 | +0,8% |
-| LSTM | 3 | 0,029709 | 0,029531 | +0,6% |
-| LSTM | 5 | 0,029903 | 0,029479 | +1,4% |
-| GRU | 1 | 0,031437 | 0,029553 | +6,4% |
-| GRU | 3 | 0,030199 | 0,029531 | +2,3% |
-| GRU | 5 | 0,030202 | 0,029479 | +2,5% |
+| LSTM | 1 | 0,029859 | 0,029553 | +1,0% |
+| LSTM | 3 | 0,052670 | 0,052421 | +0,5% |
+| LSTM | 5 | 0,069636 | 0,068560 | +1,6% |
+| GRU | 1 | 0,030097 | 0,029553 | +1,8% |
+| GRU | 3 | 0,054314 | 0,052421 | +3,6% |
+| GRU | 5 | 0,072125 | 0,068560 | +5,2% |
+
+**Corregido (6-nov-2026):** mismo problema de naive desactualizado que la tabla de
+4.2. Recalculado contra la misma fuente vigente.
 
 Ambas arquitecturas quedan en el mismo orden de magnitud que el naive, sin una
-mejora consistente; GRU se aparta algo más que LSTM en h=1, dentro de un rango
-comparable al ya observado en Track A ML. No hay evidencia de que la elección de
-celda recurrente cambie la conclusión de fondo. Ver `docs/decisions/lstm_baseline_track_b.md`
+mejora consistente; GRU se aparta más que LSTM, y ese apartamiento **crece con el
+horizonte** (+1,8% en h=1 hasta +5,2% en h=5), no al revés — mismo patrón que
+XGBoost/LightGBM en Track A ML. No hay evidencia de que la elección de celda
+recurrente cambie la conclusión de fondo. Ver `docs/decisions/lstm_baseline_track_b.md`
 y `docs/decisions/track_b_etapa2_gru_full_features.md`.
 
 #### 4.3.2 Exploración del feature set completo: degradación, no solo empate
@@ -584,20 +601,28 @@ límite más estructural.
 
 | Modelo | Horizonte | RMSE | RMSE naive | Var. vs. naive |
 |---|---|---:|---:|---:|
-| LSTM (feature set completo) | 1 | 0,068980 | 0,029553 | +133% |
-| LSTM (feature set completo) | 3 | 0,054863 | 0,029531 | +86% |
-| LSTM (feature set completo) | 5 | 0,060326 | 0,029479 | +105% |
-| GRU (feature set completo) | 1 | 0,075682 | 0,029553 | +156% |
-| GRU (feature set completo) | 3 | 0,071396 | 0,029531 | +142% |
-| GRU (feature set completo) | 5 | 0,063343 | 0,029479 | +115% |
+| LSTM (feature set completo) | 1 | 0,080021 | 0,029553 | +171% |
+| LSTM (feature set completo) | 3 | 0,095391 | 0,052421 | +82% |
+| LSTM (feature set completo) | 5 | 0,110230 | 0,068560 | +61% |
+| GRU (feature set completo) | 1 | 0,087538 | 0,029553 | +196% |
+| GRU (feature set completo) | 3 | 0,108240 | 0,052421 | +106% |
+| GRU (feature set completo) | 5 | 0,121484 | 0,068560 | +77% |
+
+**Corregido (6-nov-2026):** mismo problema de naive desactualizado; recalculado
+directamente desde `results/track_b_full_baseline/`.
 
 A diferencia del empate del feature set acotado, sumar 24 predictores **degrada
-sustancialmente** el resultado en ambas arquitecturas (RMSE 2 a 2,5 veces el del
-naive). La inspección de las predicciones descartó un problema de escala o de fuga
-de información: el modelo converge a una predicción con sesgo sistemático que no
-generaliza a validación, el patrón clásico de sobreajuste sobre un dataset de
-~1.600 filas con una dimensionalidad de entrada muy superior una vez expandida por
-las ventanas temporales — el mismo fenómeno ya observado con XGBoost en Track A, acá
+sustancialmente** el resultado en ambas arquitecturas (RMSE 1,6 a 2,7 veces el del
+naive) — y, a diferencia del patrón de 4.2/4.3.1, acá la degradación es **más
+severa cuanto más corto el horizonte** (LSTM +171% en h=1 vs. +61% en h=5), lo que
+apunta a la dimensionalidad de la ventana de entrada (24 features × hasta 30 pasos
+de lookback) ajustando ruido de muy corto plazo, más que al mismo mecanismo que
+agrava la degradación con el horizonte en los demás modelos. La inspección de las
+predicciones descartó un problema de escala o de fuga de información: el modelo
+converge a una predicción con sesgo sistemático que no generaliza a validación, el
+patrón clásico de sobreajuste sobre un dataset de ~1.600 filas con una
+dimensionalidad de entrada muy superior una vez expandida por las ventanas
+temporales — el mismo fenómeno ya observado con XGBoost/LightGBM en Track A, acá
 agravado por la dimensión temporal. El feature set acotado queda confirmado como la
 opción correcta para Track B con esta cantidad de datos disponible; no se recomienda
 retomar esta línea sin agregar regularización explícita (dropout, weight decay) o
@@ -621,15 +646,20 @@ mecanismo de atención. Ambas arquitecturas se evaluaron sobre el feature set ac
 
 | Modelo | Horizonte | RMSE | RMSE naive | Var. vs. naive |
 |---|---|---:|---:|---:|
-| CNN-LSTM | 1 | 0,030018 | 0,029553 | +1,6% |
-| CNN-LSTM | 3 | 0,030362 | 0,029531 | +2,8% |
-| CNN-LSTM | 5 | 0,029818 | 0,029479 | +1,2% |
-| TFT-lite | 1 | 0,030330 | 0,029553 | +2,6% |
-| TFT-lite | 3 | 0,030529 | 0,029531 | +3,4% |
-| TFT-lite | 5 | 0,030524 | 0,029479 | +3,5% |
+| CNN-LSTM | 1 | 0,030187 | 0,029553 | +2,1% |
+| CNN-LSTM | 3 | 0,053568 | 0,052421 | +2,2% |
+| CNN-LSTM | 5 | 0,069273 | 0,068560 | +1,0% |
+| TFT-lite | 1 | 0,030293 | 0,029553 | +2,5% |
+| TFT-lite | 3 | 0,055645 | 0,052421 | +6,2% |
+| TFT-lite | 5 | 0,072267 | 0,068560 | +5,4% |
+
+**Corregido (6-nov-2026):** mismo problema de naive desactualizado; recalculado
+contra la misma fuente vigente.
 
 Ambas arquitecturas completan el mismo patrón que LSTM y GRU: ninguna mejora sobre el
-naive con el feature set acotado. Ver `docs/decisions/track_b_etapa3_tft_hibrido.md`.
+naive con el feature set acotado. CNN-LSTM se mantiene relativamente estable entre
+horizontes; TFT-lite se aparta más, y lo hace más en h=3/h=5 (+6,2%/+5,4%) que en h=1
+(+2,5%). Ver `docs/decisions/track_b_etapa3_tft_hibrido.md`.
 
 ### 4.4 Extensión a horizontes de predicción más largos (10 y 21 días hábiles) — evaluada y descartada
 
@@ -713,8 +743,10 @@ GARCH), bajo los datos, modelos, horizontes y protocolo evaluados** (formulació
 corregida 4-nov-2026, Punto 7 del feedback de los directores — ver
 `docs/decisions/punto7_separar_conclusiones_nov2026.md`; no implica que el índice no
 sea predecible ni que no exista señal en términos absolutos). Las desviaciones
-puntuales observadas (XGBoost y LightGBM en h=1, del orden de +4%) se explican por
-sobreajuste leve y se reducen a un empate virtual en los horizontes más largos. A
+puntuales observadas (XGBoost, LightGBM y GRU) se explican por sobreajuste y, **a
+diferencia de lo que se creía antes de conciliar las tablas contra el target
+acumulado (6-nov-2026), no se reducen en los horizontes más largos — en la mayoría
+de los casos crecen** (ver sección 4.2/4.3.1). A
 diferencia de lo que anticipaba el Plan de Trabajo Final —que un enfoque de Machine
 Learning o Deep Learning superaría a los métodos estadísticos clásicos—, el resultado
 observado es una convergencia de los tres paradigmas (estadístico, ML clásico, Deep

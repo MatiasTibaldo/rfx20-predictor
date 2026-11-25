@@ -722,6 +722,48 @@ movió — ningún resultado ya reportado usa `test`, así que no afecta nada de
 lo publicado hasta ahora). Ver `docs/decisions/futures_implied_rate.md`
 sección "Nota (6-nov-2026)".
 
+**[Resuelto 6-nov-2026] Conciliación de tablas de resultados tras el
+feedback de seguimiento de los directores sobre la versión actualizada de
+la tesis.** Los directores revisaron los ajustes de las Fases A/B y
+encontraron inconsistencias reales antes de aprobar compartir "tablas
+consistentes": las Tablas 5.3 a 5.7 de la tesis (ML clásico, DL acotado, DL
+completo, DL híbridas, síntesis) **nunca se habían regenerado tras la
+corrección del target acumulado del Punto 3** (3-nov-2026) — seguían
+mostrando el naive de un solo día en $h=3$/$h=5$ (~0,0295) mientras que las
+Tablas 5.1 (ARIMA), 5.2 (GARCH) y 5.9 (bootstrap, agregada en este mismo
+pase de correcciones) ya usaban el naive acumulado correcto (~0,0524/
+~0,0686) — de ahí la discrepancia que señaló el director entre la Tabla 5.3
+y la Tabla 5.9 para el mismo (modelo, horizonte). Regeneradas las 5 tablas
+desde `results/punto9_bootstrap/bootstrap_ci_summary.parquet` y
+`results/track_b_full_baseline/`, con la prosa interpretativa reescrita
+donde el patrón cualitativo cambiaba (la degradación de ML clásico/DL
+acotado **crece** con el horizonte, no se diluye como decía la versión
+anterior). Mismo patrón corregido en `docs/avance_trabajo_final.md`.
+
+Además: (1) agregado un bootstrap de bloques (`scripts/seguimiento_direccion_bootstrap_nov2026.py`)
+para la diferencia de hit-rate contra "mayoría de train" en la sección
+5.4.1 — 2 de 27 combinaciones (Random Forest $h=5$, LSTM $h=3$) muestran un
+IC 95% que excluye 0, algo que el test binomial contra 50% no podía
+mostrar; (2) corregida la frase de "ausencia de autocorrelación lineal" en
+5.4.1, desactualizada frente al propio hallazgo de Ljung-Box/MA(1) de
+5.1.1; (3) corregida la afirmación "GARCH supera a EWMA en RMSE y QLIKE"
+(5.1.2 y `docs/decisions/garch_volatility_track_a.md`/
+`punto8_garch_evaluacion_completa_nov2026.md`) — el resultado real es
+mixto: GARCH gana en RMSE, EWMA gana en QLIKE, en los tres horizontes; (4)
+agregada una tabla condensada (por arquitectura) + figura de curvas
+representativas (`docs/figures/loss_curves_overfitting.png`) para la
+evidencia de sobreajuste de 5.3.2, en vez de solo prosa. Ver
+`docs/decisions/punto3_target_cumulativo_oct2026.md` (nota de
+conciliación agregada) para el detalle completo de esta ronda.
+
+**Deuda técnica señalada, no resuelta en este pase**: el mismo patrón de
+naive desactualizado existe también en varios decision docs individuales
+anteriores al Punto 3 (`arima_baseline_track_a.md`, `rf_track_a.md`,
+`svm_track_a.md`, `lightgbm_track_a.md`, `lstm_baseline_track_b.md`,
+`track_b_etapa2_gru_full_features.md`) — no son el documento que los
+directores están revisando, así que no se tocaron acá; pendiente un pase
+aparte si se los quiere traer al día.
+
 Nota sobre el estado de Bloque 2: con GARCH perdiendo contra su naive en los
 3 horizontes (Punto 8) y ninguno de los 9 modelos de dirección mostrando una
 mejora significativa (Punto 9), Bloque 2 no deja un "lado ganador". La

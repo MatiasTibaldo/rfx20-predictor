@@ -36,14 +36,23 @@ que GARCH (`compute_variance_metrics`) para comparabilidad directa.
 | 3 | 0,0076656 | 0,0077450 (+1,03%) | 0,0077714 (+1,38%) | -4,8946 | -4,7943 | -4,8441 |
 | 5 | 0,0132549 | 0,0134430 (+1,42%) | 0,0135442 (+2,18%) | -4,3557 | -4,2237 | -4,2882 |
 
-**Ningún método mejora sobre el naive de varianza constante**, y **EWMA
-queda peor que GARCH** en los tres horizontes y en ambas métricas —
+**Ningún método mejora sobre el naive de varianza constante.** La
+comparación GARCH vs. EWMA es **mixta, no una victoria de GARCH en ambas
+métricas (corregido 6-nov-2026, seguimiento del director — la formulación
+original de esta sección decía "EWMA queda peor que GARCH... en ambas
+métricas", pero la propia tabla de arriba muestra lo contrario en QLIKE)**:
+**EWMA queda peor que GARCH en RMSE** en los tres horizontes, pero **GARCH
+queda peor que EWMA en QLIKE** en los tres horizontes (ej. $h=1$: QLIKE
+GARCH$=-5{,}9879$ vs. EWMA$=-6{,}0105$, más bajo/mejor para EWMA) —
 resultado informativo, no solo negativo: EWMA no tiene reversión a la
 media (equivalente a persistencia=1), mientras que GARCH sí
 ($\alpha+\beta=0{,}858$) — en un mercado donde la volatilidad revierte
 relativamente rápido (vida media ~4,5 ruedas), es esperable que el modelo
-sin reversión pierda más. La conclusión de "sin ventaja de volatilidad" se
-sostiene ahora frente a dos benchmarks, no solo uno.
+sin reversión acumule más error cuadrático (RMSE); que pierda en QLIKE a
+pesar de eso sugiere que esa métrica pesa distinto los errores de cada
+modelo, no que un método domine al otro en términos absolutos. La
+conclusión de "sin ventaja de volatilidad frente al naive" se sostiene
+ahora frente a dos benchmarks, no solo uno.
 
 ### 3. Qué se pronostica en h=3/h=5
 

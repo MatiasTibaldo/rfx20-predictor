@@ -274,6 +274,10 @@ temporal común a las tres familias, con el objetivo de que las conclusiones sob
 paradigma resulta más adecuado para este problema sean comparables entre sí y no
 producto de diferencias metodológicas incidentales entre modelos.
 
+![Evolución del Índice ROFEX 20 (2018-2026) con eventos macroeconómicos](../figures/fig1_historia_rfx20.png)
+
+*Figura 1.1. Evolución del Índice ROFEX 20 entre abril de 2018 y agosto de 2026, con los principales eventos macroeconómicos identificados en este trabajo señalados sobre la serie.*
+
 ### 1.2. Objetivo
 
 **Objetivo General**
@@ -281,20 +285,18 @@ producto de diferencias metodológicas incidentales entre modelos.
 Desarrollar un sistema de predicción del Índice ROFEX 20 mediante la comparación
 sistemática de modelos estadísticos, de Machine Learning y de Deep Learning, en
 horizontes de corto plazo (de uno a cinco días hábiles), como herramienta de soporte
-para la toma de decisiones en Primary S.A. y como aporte académico al estudio de la
+para la toma de decisiones y como aporte académico al estudio de la
 predicción de series financieras en mercados emergentes.
 
-**Acotación de alcance (agregada 6-nov-2026, seguimiento del feedback de los
-directores):** este trabajo se circunscribe al **desempeño predictivo** de los
+Este trabajo se circunscribe al **desempeño predictivo** de los
 modelos —su capacidad de anticipar retorno, dirección y volatilidad bajo un
 protocolo de validación temporal riguroso—, no a su desempeño económico como
 estrategia operable. Una evaluación económica (costos de transacción, lag de
 ejecución entre la señal y la operación, tratamiento de posiciones superpuestas
 en horizontes de varios días, sobre el instrumento efectivamente operable —los
 futuros del RFX20, no el índice de contado) queda **fuera del objetivo
-formal de esta tesis**, documentada como una extensión posible para trabajo
-futuro (ver discusión en `docs/decisions/punto9_incertidumbre_nov2026.md`,
-sección 4).
+formal de este proyecto**, documentada como una extensión posible para trabajo
+futuro.
 
 **Objetivos Específicos**
 
@@ -346,6 +348,10 @@ este trabajo data de febrero de 2025. Conocer esta metodología con precisión e
 requisito para interpretar correctamente tanto la serie histórica del índice como las
 correcciones de datos descriptas en el capítulo 4, dado que varias de ellas están
 directamente motivadas por eventos que la propia metodología define y regula.
+
+![Evolución de pesos de los principales componentes del RFX20](../figures/fig7_composicion_pesos.png)
+
+*Figura 2.1. Evolución del peso de los cinco componentes de mayor ponderación promedio en la historia del RFX20.*
 
 #### 2.2.1. Composición y criterios de elegibilidad
 
@@ -575,6 +581,10 @@ de la discusión sobre la predictibilidad del retorno diario del RFX20 se apoya
 directamente en si su comportamiento es o no estadísticamente distinguible de un
 ruido blanco.
 
+![ACF y PACF del log-retorno diario del RFX20](../figures/fig2_acf_pacf.png)
+
+*Figura 3.1. Función de autocorrelación (ACF) y autocorrelación parcial (PACF) del log-retorno diario del RFX20.*
+
 #### 3.1.5. Transformaciones y test de raíces unitarias
 
 Es habitual que una serie se vuelva suficientemente estacionaria mediante
@@ -738,6 +748,10 @@ $$\text{QLIKE} = \log(\hat{\sigma}_t^2) + \frac{r_t^2}{\hat{\sigma}_t^2} \qquad 
 que penaliza tanto sobreestimar como subestimar la varianza real, y es preferida en
 esta literatura frente al error cuadrático medio simple por ser más robusta ante lo
 ruidoso del proxy de varianza realizada utilizado como referencia.
+
+![Volatilidad realizada del RFX20 — agrupamiento de volatilidad](../figures/fig3_volatility_clustering.png)
+
+*Figura 3.2. Volatilidad realizada (ventana de 20 ruedas) del RFX20, ilustrando el agrupamiento de volatilidad.*
 
 ### 3.3. Modelos de Machine Learning
 
@@ -1019,6 +1033,10 @@ tareas, alcanza un desempeño comparable —una comparación empírica directa e
 ambas arquitecturas, con el mismo protocolo de entrenamiento, es precisamente uno de
 los ejercicios realizados en este trabajo (ver sección 5.3).
 
+![Esquema de celdas LSTM y GRU](../figures/fig8_lstm_gru.png)
+
+*Figura 3.3. Esquema de las compuertas de una celda LSTM y de una celda GRU.*
+
 #### 3.4.5. Arquitectura híbrida CNN-LSTM
 
 Una arquitectura híbrida **CNN-LSTM** combina una o más capas convolucionales
@@ -1067,6 +1085,10 @@ adicionales del TFT completo resulta necesariamente aplicable a un escenario de 
 única serie sin covariables estáticas, como el del RFX20 en este trabajo —una
 consideración de alcance que se retoma explícitamente en la sección 4.5.3, donde se
 describe la arquitectura efectivamente implementada.
+
+![Esquema de CNN-LSTM y Transformer encoder](../figures/fig9_cnn_transformer.png)
+
+*Figura 3.4. Esquema de la arquitectura híbrida CNN-LSTM y del Transformer encoder.*
 
 #### 3.4.7. Optimización basada en el gradiente
 
@@ -1397,6 +1419,10 @@ constituye la fuente primaria de trazabilidad de este capítulo y del capítulo 
 el desarrollo está versionado con control de código fuente, lo que permite
 reconstruir con precisión el estado del pipeline en cualquier punto del proyecto.
 
+![Pipeline de datos del proyecto](../figures/fig10_pipeline.png)
+
+*Figura 4.1. Las cinco etapas del pipeline de datos del proyecto.*
+
 ### 4.2. Selección y descripción de los datos
 
 #### 4.2.1. Horizonte temporal y frecuencia
@@ -1520,6 +1546,10 @@ Las tres correcciones se aplican antes de cualquiera de las etapas descriptas en
 secciones 4.3 a 4.5, de modo que todos los resultados reportados en el capítulo 5 de
 este trabajo ya las incorporan.
 
+![Serie del RFX20 con correcciones de calidad de datos anotadas](../figures/fig5_correcciones_datos.png)
+
+*Figura 4.2. Serie reconstruida del RFX20 con los dos puntos de corrección de calidad de datos identificados.*
+
 ### 4.3. Ingeniería de features
 
 #### 4.3.1. Indicadores técnicos y volatilidad realizada
@@ -1632,11 +1662,13 @@ aplicada al log-precio del índice permite alcanzar estacionariedad (sección 3.
 conservando más memoria de la serie original que la diferenciación completa
 ($d=1$, equivalente al log-retorno utilizado como variable objetivo, sección 4.2.2).
 Sobre una grilla de valores de $d$ entre 0 y 1, el valor mínimo que logra
-estacionariedad según el test ADF (sección 3.1.5, $p=0{,}0165$) es $d=0{,}35$, con
-una correlación de 0,56 respecto de la serie original de log-precio, frente a 0,03
-de la diferenciación completa —una diferencia sustancial (aproximadamente 16 veces
-mayor), aunque la correlación absoluta resultante es moderada y no concluyente por sí
-sola—.
+estacionariedad según el test ADF (sección 3.1.5, $p=0{,}0052$) es $d=0{,}35$, con
+una correlación de 0,36 respecto de la serie original de log-precio —calculada
+sobre las 216 observaciones que deja disponibles la ventana fija de 1.826 ruedas
+que exige ese valor de $d$—, frente a 0,02 de la diferenciación completa —una
+diferencia sustancial (aproximadamente 15 veces mayor), aunque la correlación
+absoluta resultante es moderada y no concluyente por sí sola, y se apoya en una
+muestra efectiva considerablemente más chica que la serie completa—.
 
 Este resultado no se productivizó como feature de ningún modelo de este trabajo: se
 había previsto retomarlo si el desarrollo de los modelos ARIMA/SARIMA (sección
@@ -1646,6 +1678,10 @@ sobre la transformación estándar (sección 5.1). El hallazgo (el valor de $d$ 
 y la ganancia de memoria respecto de la diferenciación completa) se documenta en
 este trabajo como un aporte metodológico exploratorio en sí mismo, más que como un
 insumo de un modelo concreto.
+
+![ADF p-value vs. d — diferenciación fraccional](../figures/fig6_fracdiff.png)
+
+*Figura 4.3. p-value del test ADF en función del orden de diferenciación fraccional d.*
 
 ### 4.4. Particionamiento temporal y protocolo de validación
 
@@ -1696,6 +1732,10 @@ reentrenarse sobre el dataset completo antes de cualquier uso en producción,
 siguiendo la práctica estándar de utilizar train+validation combinados —o
 únicamente train, según corresponda— solo para la etapa de selección, y el historial
 completo disponible para el modelo que efectivamente se despliegue.
+
+![Particionamiento temporal del dataset de modelado](../figures/fig4_particion_temporal.png)
+
+*Figura 4.4. Particionamiento temporal del dataset de modelado: entrenamiento, validación y prueba.*
 
 #### 4.4.4. Consolidación del dataset de modelado
 
@@ -1882,13 +1922,6 @@ referenciadas (`docs/figures/`) fueron generadas con el mismo criterio.)*
 
 #### 5.1.1. ARIMA/SARIMA
 
-**Corregido (6-nov-2026):** esta sección citaba el orden ganador y las
-estadísticas de diagnóstico de una corrida anterior a la corrección del
-target acumulado (Punto 3 del feedback de los directores) y a la validación
-de continuidad de la base (Punto 2) — quedaron desactualizadas sin que
-nadie lo notara hasta ahora. Recalculado directamente sobre `log_return` de
-train, ya con ambas correcciones incorporadas.
-
 La búsqueda en grilla por AIC (sección 4.5.1, 288 candidatos) converge a
 **$(0,0,1)$, un MA(1) sin componente estacional** (AIC $=-6996{,}37$) — un
 resultado casi tan simple como "sin estructura", pero no idéntico: existe un
@@ -1976,16 +2009,23 @@ validación.
 | 5 | 0,0134430 | 0,0132549 | 0,0135442 | -4,224 | -4,356 | -4,288 |
 
 A diferencia de lo que el diagnóstico de ARIMA hacía anticipar, **ninguno de los
-tres métodos mejora sobre la referencia de varianza constante**: dicho de forma
-explícita, **GARCH supera a EWMA en esta comparación, pero la referencia de
-varianza constante (el naive) sigue siendo la de mejor desempeño de los tres**,
-tanto en RMSE como en QLIKE, en los tres horizontes. Esto es, en sí
+tres métodos mejora sobre la referencia de varianza constante en RMSE**. La
+comparación entre GARCH y EWMA, sin embargo, **es mixta, no una victoria de GARCH
+en ambas métricas**: dicho de forma explícita, **GARCH tiene menor (mejor) RMSE que
+EWMA en los tres horizontes, pero EWMA tiene menor (mejor) QLIKE que GARCH en los
+tres horizontes** (ej. $h=1$: QLIKE GARCH$=-5{,}988$ vs. EWMA$=-6{,}011$, más bajo
+—mejor— para EWMA). La referencia de varianza constante (el naive) sigue siendo la
+de mejor desempeño de los tres en ambas métricas. Este resultado mixto es, en sí
 mismo, informativo: EWMA no incorpora reversión a la media en su pronóstico
 (equivalente a un proceso IGARCH, persistencia=1), mientras que GARCH sí la tiene
 ($\alpha+\beta=0{,}858<1$) — en un mercado donde la volatilidad revierte
 relativamente rápido (vida media ~4,5 ruedas), es esperable que un modelo sin
-reversión quede peor que uno con reversión moderada, que es exactamente lo
-observado. Se verificó además que la comparación no depende de una definición
+reversión acumule más error cuadrático (RMSE) que uno con reversión moderada, que
+es lo que se observa; que EWMA gane en QLIKE a pesar de eso sugiere que la
+penalización logarítmica de esa métrica pesa de forma distinta los errores de
+GARCH y EWMA, y no debe leerse como que un método domina al otro en términos
+absolutos — ambas métricas miden aspectos distintos del error de pronóstico de
+varianza. Se verificó además que la comparación no depende de una definición
 particularmente desfavorable del naive: un naive alternativo calculado sobre la
 varianza de entrenamiento winsorizada (recorte del 1%/99%) resulta igual o
 levemente peor que el naive crudo, y GARCH sigue sin superar a ninguno de los dos.
@@ -2009,9 +2049,23 @@ un modelo GARCH mejore sobre un naive en la métrica de error cuadrático, aun c
 la especificación capture correctamente la dinámica de la volatilidad (persistencia
 moderada, colas pesadas). Ninguno de los dos modelos estadísticos clásicos de este
 trabajo —ni para la media, ni para la varianza condicional— supera a su naive
-respectivo en los tres horizontes evaluados. Las figuras `docs/figures/predicted_vs_real_h{1,3,5}.png`
-y `docs/figures/garch_volatility.png` ilustran, respectivamente, las predicciones de
-ambos modelos frente al valor real.
+respectivo en los tres horizontes evaluados.
+
+![Predicho vs. real, horizonte 1 día](../figures/predicted_vs_real_h1.png)
+
+*Figura 5.1. Predicho vs. real, horizonte 1 día, todos los modelos de retorno.*
+
+![Predicho vs. real, horizonte 3 días](../figures/predicted_vs_real_h3.png)
+
+*Figura 5.2. Predicho vs. real, horizonte 3 días, todos los modelos de retorno.*
+
+![Predicho vs. real, horizonte 5 días](../figures/predicted_vs_real_h5.png)
+
+*Figura 5.3. Predicho vs. real, horizonte 5 días, todos los modelos de retorno.*
+
+![Volatilidad predicha por GARCH vs. realizada](../figures/garch_volatility.png)
+
+*Figura 5.4. Volatilidad predicha por GARCH vs. volatilidad realizada, conjunto de validación.*
 
 ### 5.2. Modelos de Machine Learning clásico
 
@@ -2023,32 +2077,36 @@ validación.
 
 | Modelo | Horizonte | RMSE | RMSE naive | Variación vs. naive |
 |---|---|---:|---:|---:|
-| SVM | 1 | 0,029695 | 0,029553 | +0,5% |
-| SVM | 3 | 0,029849 | 0,029531 | +1,1% |
-| SVM | 5 | 0,029789 | 0,029479 | +1,0% |
-| Random Forest | 1 | 0,029539 | 0,029553 | -0,0% |
-| Random Forest | 3 | 0,029694 | 0,029531 | +0,6% |
-| Random Forest | 5 | 0,029587 | 0,029479 | +0,4% |
-| XGBoost | 1 | 0,030607 | 0,029553 | +3,6% |
-| XGBoost | 3 | 0,029792 | 0,029531 | +0,9% |
-| XGBoost | 5 | 0,029655 | 0,029479 | +0,6% |
-| LightGBM | 1 | 0,030767 | 0,029553 | +4,1% |
-| LightGBM | 3 | 0,029550 | 0,029531 | +0,1% |
-| LightGBM | 5 | 0,029688 | 0,029479 | +0,7% |
+| SVM | 1 | 0,029692 | 0,029553 | +0,5% |
+| SVM | 3 | 0,052589 | 0,052421 | +0,3% |
+| SVM | 5 | 0,070400 | 0,068560 | +2,7% |
+| Random Forest | 1 | 0,029518 | 0,029553 | -0,1% |
+| Random Forest | 3 | 0,053894 | 0,052421 | +2,8% |
+| Random Forest | 5 | 0,070961 | 0,068560 | +3,5% |
+| XGBoost | 1 | 0,030381 | 0,029553 | +2,8% |
+| XGBoost | 3 | 0,056862 | 0,052421 | +8,5% |
+| XGBoost | 5 | 0,072565 | 0,068560 | +5,8% |
+| LightGBM | 1 | 0,030758 | 0,029553 | +4,1% |
+| LightGBM | 3 | 0,055759 | 0,052421 | +6,4% |
+| LightGBM | 5 | 0,072573 | 0,068560 | +5,9% |
 
-SVM y Random Forest quedan prácticamente empatados con el naive en los tres
-horizontes —diferencias de tercer o cuarto decimal, dentro del margen esperable de
-ruido—. XGBoost y LightGBM muestran una desviación algo mayor en el horizonte más
-corto (+3,6% y +4,1% respectivamente en $h=1$), que se reduce a un empate virtual en
-$h=3$ y $h=5$. Este patrón —peor desempeño relativo cuanto más corto (y más ruidoso)
-el horizonte— es consistente con **sobreajuste leve** más que con una limitación
-estructural de estos dos algoritmos: ambos son los de mayor capacidad entre los
-cuatro (sección 3.3.4-3.3.6), y sobre un conjunto de entrenamiento de tamaño moderado
-(~1.600 filas) tienen más margen para ajustar ruido específico del horizonte más
-cercano que para encontrar señal genuina. Es importante notar que este resultado se
-reporta tal como salió de la búsqueda de hiperparámetros por validación cruzada
-(sección 4.5.2), sin ajuste manual posterior para mejorar el número —un criterio
-deliberado para mantener el protocolo replicable y no sesgado por intervención
+Con el naive correcto (target acumulado), **la degradación crece
+con el horizonte, no se diluye**. SVM queda el más cercano al naive
+(+0,5%/+0,3%/+2,7%), con su mayor desvío recién en $h=5$. Random Forest está
+prácticamente empatado en $h=1$ (-0,1%) pero la brecha se amplía a +2,8% en
+$h=3$ y +3,5% en $h=5$. XGBoost y LightGBM muestran el patrón más marcado:
+ya se apartan en $h=1$ (+2,8% y +4,1%), y lejos de reducirse, la brecha
+crece hacia horizontes más largos —XGBoost alcanza su peor resultado en
+$h=3$ (+8,5%), LightGBM crece de forma prácticamente monótona hasta +5,9%
+en $h=5$—. Este patrón es consistente con **sobreajuste** que se agrava, no
+se atenúa, a medida que el target acumulado introduce más varianza y más
+margen para ajustar ruido específico de la muestra de entrenamiento
+(~1.600 filas) en vez de señal genuina — el mismo fenómeno, con más
+intensidad todavía, que se documenta para Deep Learning en la sección
+5.3.2. Es importante notar que este resultado se reporta tal como salió de
+la búsqueda de hiperparámetros por validación cruzada (sección 4.5.2), sin
+ajuste manual posterior para mejorar el número —un criterio deliberado
+para mantener el protocolo replicable y no sesgado por intervención
 post-hoc.
 
 En los cuatro modelos, el análisis de **importancia de variables por permutación**
@@ -2089,18 +2147,22 @@ realizada) vs. naive, conjunto de validación.
 
 | Modelo | Horizonte | RMSE | RMSE naive | Variación vs. naive |
 |---|---|---:|---:|---:|
-| LSTM | 1 | 0,029803 | 0,029553 | +0,8% |
-| LSTM | 3 | 0,029709 | 0,029531 | +0,6% |
-| LSTM | 5 | 0,029903 | 0,029479 | +1,4% |
-| GRU | 1 | 0,031437 | 0,029553 | +6,4% |
-| GRU | 3 | 0,030199 | 0,029531 | +2,3% |
-| GRU | 5 | 0,030202 | 0,029479 | +2,5% |
+| LSTM | 1 | 0,029859 | 0,029553 | +1,0% |
+| LSTM | 3 | 0,052670 | 0,052421 | +0,5% |
+| LSTM | 5 | 0,069636 | 0,068560 | +1,6% |
+| GRU | 1 | 0,030097 | 0,029553 | +1,8% |
+| GRU | 3 | 0,054314 | 0,052421 | +3,6% |
+| GRU | 5 | 0,072125 | 0,068560 | +5,2% |
 
-Ambas arquitecturas quedan en el mismo orden de magnitud que el naive. GRU se aparta
-algo más que LSTM, en particular en $h=1$, pero dentro de un rango comparable al ya
-observado para los modelos de Machine Learning clásico (Tabla 5.3): no hay evidencia
-de que la elección de celda recurrente (sección 3.4.3-3.4.4) cambie la conclusión de
-fondo sobre la ausencia de señal direccional explotable.
+Ambas arquitecturas quedan en el mismo orden de magnitud que el naive, con GRU
+apartándose más que LSTM en los tres horizontes. El mayor apartamiento de GRU
+**no** está en $h=1$
+(+1,8%, el más chico de los tres) sino que crece con el horizonte hasta +5,2% en
+$h=5$ — el mismo patrón de degradación creciente con el horizonte ya señalado para
+los modelos de ML clásico (Tabla 5.3). LSTM se mantiene más estable, pero también
+en un rango comparable al ya observado en la Tabla 5.3: no hay evidencia de que la
+elección de celda recurrente (sección 3.4.3-3.4.4) cambie la conclusión de fondo
+sobre la ausencia de señal direccional explotable.
 
 #### 5.3.2. Exploración del feature set completo: degradación, no solo empate
 
@@ -2109,26 +2171,30 @@ predictores) vs. naive, conjunto de validación.
 
 | Modelo | Horizonte | RMSE | RMSE naive | Variación vs. naive |
 |---|---|---:|---:|---:|
-| LSTM (completo) | 1 | 0,068980 | 0,029553 | +133% |
-| LSTM (completo) | 3 | 0,054863 | 0,029531 | +86% |
-| LSTM (completo) | 5 | 0,060326 | 0,029479 | +105% |
-| GRU (completo) | 1 | 0,075682 | 0,029553 | +156% |
-| GRU (completo) | 3 | 0,071396 | 0,029531 | +142% |
-| GRU (completo) | 5 | 0,063343 | 0,029479 | +115% |
+| LSTM (completo) | 1 | 0,080021 | 0,029553 | +171% |
+| LSTM (completo) | 3 | 0,095391 | 0,052421 | +82% |
+| LSTM (completo) | 5 | 0,110230 | 0,068560 | +61% |
+| GRU (completo) | 1 | 0,087538 | 0,029553 | +196% |
+| GRU (completo) | 3 | 0,108240 | 0,052421 | +106% |
+| GRU (completo) | 5 | 0,121484 | 0,068560 | +77% |
 
 A diferencia del empate virtual de la Tabla 5.4, sumar el feature set completo
-**degrada sustancialmente** el resultado en ambas arquitecturas —RMSE entre 2 y 2,5
-veces el del naive, no un empate—. La inspección de las predicciones descartó un
-problema de escala o de fuga de información: el modelo converge a una predicción con
-sesgo sistemático que no generaliza al conjunto de validación, el patrón característico
-de sobreajuste, aquí agravado por la dimensión temporal de las ventanas (24 features
-× hasta 30 pasos de lookback, sobre ~1.600 filas de entrenamiento) — el mismo
-fenómeno observado con XGBoost en la Tabla 5.3, pero más pronunciado. El feature set
-acotado de la Tabla 5.4 queda confirmado como la opción correcta para esta cantidad
-de datos disponible.
+**degrada sustancialmente** el resultado en ambas arquitecturas —RMSE entre 1,6 y
+2,7 veces el del naive—. A diferencia del patrón de las Tablas 5.3 y 5.4 (donde la
+degradación crece con el horizonte), acá ocurre lo contrario: la degradación es
+**más severa cuanto más corto el horizonte** (LSTM +171% en $h=1$ frente a +61% en
+$h=5$; GRU +196% frente a +77%) — consistente con que el efecto dominante acá es la
+dimensionalidad de la ventana de entrada (24 features × hasta 30 pasos de
+*lookback*, sobre ~1.600 filas de entrenamiento) ajustando ruido de muy corto plazo,
+no el mismo mecanismo que genera la degradación creciente con el horizonte de las
+Tablas 5.3/5.4. La inspección de las predicciones descartó un problema de escala o
+de fuga de información: el modelo converge a una predicción con sesgo sistemático
+que no generaliza al conjunto de validación, el patrón característico de
+sobreajuste — el mismo fenómeno observado con XGBoost/LightGBM en la Tabla 5.3, pero
+más pronunciado. El feature set acotado de la Tabla 5.4 queda confirmado como la
+opción correcta para esta cantidad de datos disponible.
 
-**Evidencia adicional (agregada 6-nov-2026, seguimiento del feedback de los
-directores):** esta explicación de sobreajuste no se apoya únicamente en el
+Esta explicación de sobreajuste no se apoya únicamente en el
 patrón de RMSE. Se instrumentó el ciclo de entrenamiento para persistir, además
 de la pérdida de *early stopping* (que ya se usaba para decidir cuándo
 frenar), la pérdida sobre el propio conjunto de entrenamiento en cada época —
@@ -2142,6 +2208,31 @@ proyecto (3 datasets × 4 arquitecturas × 3 horizontes) la confirma en la
 totalidad de los casos evaluados, agravándose de forma sistemática con el
 horizonte de pronóstico y con la dimensionalidad del conjunto de features.
 
+Las curvas de las dos configuraciones más representativas del barrido ilustran
+el contraste: en la configuración más degradada (LSTM, dataset de composición
+A, $h=5$, brecha final 0,119) la pérdida de *early stopping* nunca deja de
+crecer, ni siquiera en la primera época registrada, mientras que en la
+configuración más sana (CNN-LSTM, dataset baseline, $h=1$, brecha final
+prácticamente nula) ambas curvas se mantienen acopladas durante todo el
+entrenamiento.
+
+![Curvas de pérdida train vs. early stopping, caso más degradado vs. más sano](../figures/loss_curves_overfitting.png)
+
+**Tabla 5.5bis.** Brecha final (`gap_last` = pérdida de early stopping menos
+pérdida de train, última época) agregada por arquitectura sobre las 36
+combinaciones del barrido.
+
+| Arquitectura | Media | Mín. | Máx. |
+|---|---:|---:|---:|
+| LSTM | 0,040 | 0,006 | 0,119 |
+| GRU | 0,008 | 0,003 | 0,017 |
+| CNN-LSTM | 0,024 | 0,0003 | 0,075 |
+| Transformer encoder | 0,011 | 0,001 | 0,031 |
+
+Las 36/36 combinaciones terminan con brecha positiva — LSTM y CNN-LSTM muestran las
+brechas más grandes (y más dispersas), GRU y Transformer encoder tienden a brechas
+menores sin quedar exentas.
+
 #### 5.3.3. Arquitecturas híbridas y basadas en atención: CNN-LSTM y Transformer encoder
 
 **Tabla 5.6.** CNN-LSTM y Transformer encoder (feature set acotado) vs. naive, conjunto de
@@ -2149,18 +2240,20 @@ validación.
 
 | Modelo | Horizonte | RMSE | RMSE naive | Variación vs. naive |
 |---|---|---:|---:|---:|
-| CNN-LSTM | 1 | 0,030018 | 0,029553 | +1,6% |
-| CNN-LSTM | 3 | 0,030362 | 0,029531 | +2,8% |
-| CNN-LSTM | 5 | 0,029818 | 0,029479 | +1,2% |
-| Transformer encoder | 1 | 0,030330 | 0,029553 | +2,6% |
-| Transformer encoder | 3 | 0,030529 | 0,029531 | +3,4% |
-| Transformer encoder | 5 | 0,030524 | 0,029479 | +3,5% |
+| CNN-LSTM | 1 | 0,030187 | 0,029553 | +2,1% |
+| CNN-LSTM | 3 | 0,053568 | 0,052421 | +2,2% |
+| CNN-LSTM | 5 | 0,069273 | 0,068560 | +1,0% |
+| Transformer encoder | 1 | 0,030293 | 0,029553 | +2,5% |
+| Transformer encoder | 3 | 0,055645 | 0,052421 | +6,2% |
+| Transformer encoder | 5 | 0,072267 | 0,068560 | +5,4% |
 
 Ambas arquitecturas completan el mismo patrón que LSTM y GRU: ninguna mejora sobre
-el naive con el feature set acotado. Ni la incorporación de un componente
-convolucional (CNN-LSTM) ni la de un mecanismo de atención (Transformer encoder, sección 3.4.6)
-encuentran estructura adicional que las arquitecturas puramente recurrentes no hayan
-encontrado ya.
+el naive con el feature set acotado. CNN-LSTM se mantiene relativamente estable entre
+horizontes (+2,1% a +1,0%), mientras que Transformer encoder se aparta más y, al
+igual que GRU en la Tabla 5.4, lo hace más en $h=3$/$h=5$ (+6,2%/+5,4%) que en $h=1$
+(+2,5%). Ni la incorporación de un componente convolucional (CNN-LSTM) ni la de un
+mecanismo de atención (Transformer encoder, sección 3.4.6) encuentran estructura
+adicional que las arquitecturas puramente recurrentes no hayan encontrado ya.
 
 ### 5.4. Síntesis comparativa
 
@@ -2169,31 +2262,33 @@ horizontes de 1, 3 y 5 días hábiles —nueve orientados a la dirección del re
 (ARIMA/SARIMA, SVM, Random Forest, XGBoost, LightGBM, LSTM, GRU, CNN-LSTM, Transformer encoder)
 y uno a su volatilidad condicional (GARCH)—, **no se encontró una mejora consistente
 frente al pronóstico de retorno cero, bajo los datos, modelos, horizontes y
-protocolo evaluados** (Tabla 5.7). Las desviaciones puntuales más notorias (XGBoost
-y LightGBM en $h=1$, Tabla 5.3) se explican por sobreajuste leve y se reducen a un
-empate virtual en los horizontes más largos. Esta formulación es deliberadamente
-acotada: un RMSE en línea con el naive no permite, por sí solo, afirmar que el
-índice no es predecible ni que no existe señal en los datos — solo que, bajo este
-protocolo específico, ningún modelo la explotó mejor que predecir cero.
+protocolo evaluados** (Tabla 5.7). Las desviaciones puntuales más notorias (XGBoost,
+LightGBM y GRU, Tabla 5.3/5.4) se explican por sobreajuste y **no se reducen en los
+horizontes más largos — en la mayoría de los casos crecen** (sección 5.2). Esta formulación es
+deliberadamente acotada: un RMSE en línea con el naive no permite, por sí solo,
+afirmar que el índice no es predecible ni que no existe señal en los datos — solo
+que, bajo este protocolo específico, ningún modelo la explotó mejor que predecir
+cero.
 
 **Tabla 5.7.** Síntesis: variación de RMSE vs. naive por modelo y horizonte (celda
 en blanco donde no aplica).
 
 | Modelo | Paradigma | $h=1$ | $h=3$ | $h=5$ |
 |---|---|---:|---:|---:|
-| ARIMA/SARIMA | Estadístico | -0,1% | 0,0% | 0,0% |
-| GARCH (volatilidad) | Estadístico | +0,9% | +1,2% | +1,3% |
-| SVM | ML clásico | +0,5% | +1,1% | +1,0% |
-| Random Forest | ML clásico | -0,0% | +0,6% | +0,4% |
-| XGBoost | ML clásico | +3,6% | +0,9% | +0,6% |
-| LightGBM | ML clásico | +4,1% | +0,1% | +0,7% |
-| LSTM | Deep Learning | +0,8% | +0,6% | +1,4% |
-| GRU | Deep Learning | +6,4% | +2,3% | +2,5% |
-| CNN-LSTM | Deep Learning | +1,6% | +2,8% | +1,2% |
-| Transformer encoder | Deep Learning | +2,6% | +3,4% | +3,5% |
+| ARIMA/SARIMA | Estadístico | -0,1% | +0,1% | -0,1% |
+| GARCH (volatilidad) | Estadístico | +0,9% | +1,0% | +1,4% |
+| SVM | ML clásico | +0,5% | +0,3% | +2,7% |
+| Random Forest | ML clásico | -0,1% | +2,8% | +3,5% |
+| XGBoost | ML clásico | +2,8% | +8,5% | +5,8% |
+| LightGBM | ML clásico | +4,1% | +6,4% | +5,9% |
+| LSTM | Deep Learning | +1,0% | +0,5% | +1,6% |
+| GRU | Deep Learning | +1,8% | +3,6% | +5,2% |
+| CNN-LSTM | Deep Learning | +2,1% | +2,2% | +1,0% |
+| Transformer encoder | Deep Learning | +2,5% | +6,2% | +5,4% |
 
-*(Ver `docs/figures/rmse_comparison.png` para la versión gráfica de esta tabla, con
-un panel por horizonte.)*
+![Comparación de RMSE por modelo y horizonte](../figures/rmse_comparison.png)
+
+*Figura 5.5. Comparación de RMSE por modelo y horizonte, línea de referencia = naive (predecir retorno 0).*
 
 #### 5.4.1. Dimensión de dirección: hit-rate
 
@@ -2207,16 +2302,15 @@ aciertos, sobre las mismas predicciones de validación de la Tabla 5.7 (n=294 po
 celda).
 
 **Tabla 5.8.** Hit-rate y significancia (test binomial vs. 50%), conjunto de
-validación. Se incluye, además del umbral de 50%, un segundo benchmark pedido
-explícitamente por los directores: **"mayoría de train"**, la regla de
-predecir siempre el signo más frecuente del retorno acumulado observado en
-train para ese horizonte — calculada sobre train, no sobre val, para no
-filtrar información hacia la regla. El balance de subas y bajas en train
-**no es 50/50 y varía por horizonte** (55,8% de días positivos en $h=1$,
-58,0% en $h=3$, 59,5% en $h=5$ — la proporción de positivos crece con el
-horizonte, consistente con la acumulación de un *drift* leve), así que 50%
-no es necesariamente la referencia más justa, tal como señalan los
-directores.
+validación. Se incluye, además del umbral de 50%, un segundo benchmark:
+**"mayoría de train"**, la regla de predecir siempre el signo más frecuente
+del retorno acumulado observado en train para ese horizonte — calculada
+sobre train, no sobre val, para no filtrar información hacia la regla. El
+balance de subas y bajas en train **no es 50/50 y varía por horizonte**
+(55,8% de días positivos en $h=1$, 58,0% en $h=3$, 59,5% en $h=5$ — la
+proporción de positivos crece con el horizonte, consistente con la
+acumulación de un *drift* leve), así que 50% no es necesariamente la
+referencia más justa.
 
 | Modelo | $h=1$ | $h=3$ | $h=5$ |
 |---|---:|---:|---:|
@@ -2248,12 +2342,52 @@ la dimensión de dirección, independiente del RMSE: bajo el protocolo
 evaluado, tampoco se detectó capacidad de anticipar el signo del retorno por
 encima de lo que ya anticipa el sesgo histórico de la propia serie.
 
-Esta conclusión tampoco se extiende, sin más, a la volatilidad: la ausencia de
-autocorrelación lineal en el retorno (ARIMA, sección 5.1) y la ausencia de hit-rate
-direccional no implican nada sobre la varianza condicional, que es una pregunta
-distinta y se trata por separado (GARCH, Tabla 5.7, fila "volatilidad") — ni sobre
-dependencias no lineales que un test de hit-rate agregado, igual que el RMSE, no
-está diseñado para detectar de forma aislada por sí solo.
+El test
+binomial de la Tabla 5.8 compara cada modelo contra el 50% al azar, no contra
+"mayoría de train" — la comparación que el propio documento identifica como la
+relevante. Para eso se aplicó el mismo criterio de incertidumbre que la Tabla 5.9
+(bootstrap de bloques móviles, $L=10$, 2.000 remuestreos, misma semilla), acá sobre
+la diferencia diaria de aciertos (`hit_modelo - hit_mayoría`) en vez de sobre RMSE,
+preservando la misma dependencia temporal que ya motivó el enfoque de bloques.
+
+**Tabla 5.8bis.** Diferencia de hit-rate vs. "mayoría de train" (puntos
+porcentuales) e intervalo de confianza 95% por bootstrap de bloques, conjunto de
+validación.
+
+| Modelo | $h=1$ | $h=3$ | $h=5$ |
+|---|---:|---:|---:|
+| ARIMA/SARIMA | -0,3 pp [-7,5, +8,2] | +3,1 pp [-6,5, +11,9] | +5,1 pp [-7,1, +14,0] |
+| SVM | -0,7 pp [-1,7, +0,0] | -0,3 pp [-1,4, +0,3] | +0,0 pp [+0,0, +0,0] |
+| Random Forest | +4,4 pp [-0,7, +9,9] | +2,4 pp [-4,4, +8,5] | **+4,8 pp [+0,3, +10,5]** |
+| XGBoost | +3,7 pp [-4,1, +10,9] | +7,8 pp [-4,1, +18,7] | -1,0 pp [-15,0, +12,9] |
+| LightGBM | +4,8 pp [-2,7, +12,2] | +4,1 pp [-7,5, +14,3] | +4,1 pp [-9,5, +17,0] |
+| LSTM | +3,1 pp [-2,0, +8,8] | **+3,7 pp [+0,3, +7,8]** | +0,7 pp [-2,0, +4,1] |
+| GRU | +2,4 pp [-2,0, +7,5] | -1,4 pp [-5,1, +1,7] | +0,0 pp [-3,1, +3,1] |
+| CNN-LSTM | -0,3 pp [-5,4, +5,1] | -1,0 pp [-5,8, +4,8] | -0,7 pp [-5,8, +4,1] |
+| Transformer encoder | -1,0 pp [-8,2, +6,1] | +0,0 pp [-5,8, +7,1] | +4,1 pp [-4,8, +12,6] |
+
+**2 de las 27 combinaciones muestran un IC 95% que excluye 0** — Random Forest en
+$h=5$ (+4,8 pp, IC [+0,3, +10,5]) y LSTM en $h=3$ (+3,7 pp, IC [+0,3, +7,8]) superan
+a "mayoría de train" de una forma que el bootstrap no atribuye a variabilidad
+muestral pura, algo que el test binomial contra 50% no podía mostrar (ninguna de
+las 27 combinaciones alcanzaba significancia ahí). Esto matiza, sin revertir, la
+lectura de la Tabla 5.8: la mayoría de los modelos (25/27) sigue sin distinguirse
+de "mayoría de train", pero estos dos casos puntuales sí lo hacen. Conviene no
+sobre-interpretarlos: ninguno de los dos corresponde al mejor RMSE de su familia
+(Random Forest $h=5$ es, de hecho, uno de los peores en RMSE vs. naive de la Tabla
+5.3, +3,5%; LSTM $h=3$ sí es consistente con su buen RMSE en esa tabla, +0,5%), y
+con 27 comparaciones sin corrección por múltiples pruebas, 1-2 excedencias por
+azar están dentro de lo esperable — se reportan como lo que son, hallazgos
+puntuales a tener en cuenta, no como evidencia de una capacidad direccional
+sistemática.
+
+Esta conclusión tampoco se extiende, sin más, a la volatilidad: el test de
+Ljung-Box sí detecta una dependencia de corto plazo real, aunque pequeña, en el
+retorno (ARIMA, sección 5.1.1) — pero esa dependencia no implica nada sobre la
+varianza condicional, que es una pregunta distinta y se trata por separado (GARCH,
+Tabla 5.7, fila "volatilidad"), ni sobre dependencias no lineales que un test de
+hit-rate agregado, igual que el RMSE, no está diseñado para detectar de forma
+aislada por sí solo.
 
 #### 5.4.2. Lectura del resultado
 
@@ -2272,10 +2406,11 @@ alcance más allá de lo efectivamente evaluado:
    procesamiento compartida) como explicación alternativa a "no hay señal
    explotable en el fenómeno".
 2. **Cuando se sube la capacidad del modelo sin subir la señal disponible, el
-   resultado es una degradación, no un empate** (XGBoost/LightGBM en $h=1$, Tabla
-   5.3; LSTM/GRU con el feature set completo, Tabla 5.5) — un patrón adicional,
-   consistente con sobreajuste sobre un conjunto de entrenamiento acotado (~1.600
-   filas), más que con la mera ausencia de señal.
+   resultado es una degradación, no un empate** (XGBoost en $h=3$, su peor
+   resultado, +8,5%; LightGBM creciendo hasta +5,9% en $h=5$; Tabla 5.3 — LSTM/GRU
+   con el feature set completo son el caso más extremo, Tabla 5.5) — un patrón
+   adicional, consistente con sobreajuste sobre un conjunto de entrenamiento
+   acotado (~1.600 filas), más que con la mera ausencia de señal.
 
 Si se busca encuadrar el resultado en la literatura de eficiencia de mercados, el
 encuadre correcto es el de la **forma semifuerte** de la hipótesis, no la débil: la
@@ -2354,10 +2489,7 @@ modelos y horizontes (Random Forest, XGBoost, LightGBM y GRU en $h=3$/$h=5$,
 en particular) muestran un RMSE notablemente mayor en la segunda mitad —
 coincide con un tramo de mayor volatilidad del índice dentro del período de
 validación, no con que el resultado dependa de un puñado aislado de
-jornadas extremas. El detalle completo, con RMSE/MAE absolutos y la apertura
-por mitad para los 27 casos, está en
-`docs/decisions/punto9_incertidumbre_nov2026.md` y
-`results/punto9_bootstrap/bootstrap_ci_summary.parquet`.
+jornadas extremas.
 
 **Implicancia para la Fase 5 del proyecto (comparación y selección de modelo
 final):** una combinación de modelos puede reducir el error de pronóstico

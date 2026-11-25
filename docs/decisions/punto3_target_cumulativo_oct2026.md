@@ -163,3 +163,30 @@ código usado en esta re-corrida — ver
   sesión, ver sección "Punto 3" de `CLAUDE.md`).
 - Regenerar `evaluation/figures.py` (los PNG de `docs/figures/` tienen los
   números viejos).
+
+## Nota de conciliación (6-nov-2026): el pendiente de arriba se concretó a medias, y se detectó en el feedback de seguimiento
+
+El ítem "actualizar el resto de los decision docs / tesis" quedó marcado
+como pendiente desde el 4-nov-2026, pero solo se ejecutó parcialmente: las
+Tablas 5.1 (ARIMA) y 5.2 (GARCH) de la tesis sí se corrigieron (ver arriba),
+pero las **Tablas 5.3 a 5.7** (SVM/RF/XGBoost/LightGBM, LSTM/GRU acotado y
+completo, CNN-LSTM/Transformer encoder, y la síntesis) **quedaron sin
+regenerar** — seguían citando el naive de un solo día (~0,0295 en $h=3$/
+$h=5$) de la tabla "antes — bug" de este mismo documento, en vez del
+acumulado correcto que esta misma sección ya documentaba desde el
+3-nov-2026. Lo mismo ocurría en `docs/avance_trabajo_final.md`.
+
+Esto salió a la luz en el feedback de seguimiento de los directores
+(6-nov-2026) sobre la versión con los ajustes de las Fases A/B: notaron que
+la Tabla 5.9 (bootstrap, agregada en esa misma ronda con los números
+correctos) no coincidía con la Tabla 5.3 para las mismas combinaciones
+(modelo, horizonte) — exactamente el síntoma de este gap. Corregido en el
+mismo pase: las 5 tablas regeneradas contra
+`results/punto9_bootstrap/bootstrap_ci_summary.parquet` (fuente única,
+consistente con la Tabla 5.9 por construcción) y
+`results/track_b_full_baseline/` para la Tabla 5.5, en la tesis y en
+`docs/avance_trabajo_final.md`. Quedan sin tocar, señalados como deuda
+técnica explícita (no son el documento bajo revisión de los directores):
+`arima_baseline_track_a.md`, `rf_track_a.md`, `svm_track_a.md`,
+`lightgbm_track_a.md`, `lstm_baseline_track_b.md` y
+`track_b_etapa2_gru_full_features.md`.

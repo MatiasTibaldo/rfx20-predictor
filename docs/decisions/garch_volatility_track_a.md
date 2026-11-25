@@ -75,22 +75,30 @@
 > acumulado, no de un retorno puntual. Target y pronóstico miden la misma
 > cantidad en los tres horizontes.
 >
-> **Lectura del benchmark EWMA (explicitada 6-nov-2026, seguimiento del
-> director)**: **GARCH supera a EWMA en esta comparación** (+0,88%/+1,03%/+1,42%
-> vs. naive, contra +1,10%/+1,38%/+2,18% de EWMA en los mismos tres
-> horizontes), **pero la referencia de varianza constante (el naive) sigue
-> siendo la de mejor desempeño de los tres** — ninguno de los tres métodos
-> (naive plano, GARCH, EWMA) mejora sobre el naive de varianza constante; de
-> hecho **EWMA es el peor de los tres**. Es un resultado informativo: EWMA no
-> tiene reversión a la media en su pronóstico (equivalente a un proceso
-> IGARCH, persistencia=1), mientras que GARCH sí la tiene
-> (α+β=0,858 < 1) — en un mercado donde la volatilidad revierte
-> relativamente rápido (vida media ~4,5 ruedas), un modelo sin reversión
-> como EWMA debería, si acaso, quedar peor que uno con reversión moderada,
-> que es exactamente lo que se observa. Ningún benchmark de volatilidad
-> probado —ni el más simple (naive plano) ni los dos que sí modelan
-> agrupamiento de volatilidad (GARCH, EWMA)— mejora sobre predecir
-> varianza constante en este dataset.
+> **Lectura del benchmark EWMA (corregida 6-nov-2026, seguimiento del
+> director — la formulación anterior de esta nota afirmaba que GARCH supera
+> a EWMA "en esta comparación" sin distinguir métrica; el director señaló,
+> correctamente, que la Tabla de arriba muestra un resultado mixto, no una
+> victoria de GARCH en ambas)**: **en RMSE, GARCH supera a EWMA en los tres
+> horizontes** (+0,88%/+1,03%/+1,42% vs. naive, contra +1,10%/+1,38%/+2,18%
+> de EWMA) — acá sí, EWMA es el peor de los tres en RMSE. **En QLIKE ocurre
+> lo contrario: EWMA supera a GARCH en los tres horizontes** (ej. $h=1$:
+> QLIKE GARCH=-5,988 vs. EWMA=-6,011, más bajo/mejor para EWMA) — en esta
+> métrica es GARCH el peor de los dos modelos (aunque ninguno de los dos
+> supera al naive, que sigue siendo el mejor de los tres en ambas métricas).
+> Es un resultado mixto, no una dominancia de un método sobre el otro: EWMA
+> no tiene reversión a la media en su pronóstico (equivalente a un proceso
+> IGARCH, persistencia=1), mientras que GARCH sí la tiene (α+β=0,858 < 1) —
+> en un mercado donde la volatilidad revierte relativamente rápido (vida
+> media ~4,5 ruedas), es esperable que un modelo sin reversión acumule más
+> error cuadrático (RMSE) que uno con reversión moderada, que es lo que se
+> observa; que EWMA gane en QLIKE a pesar de eso sugiere que la
+> penalización logarítmica de esa métrica pesa distinto los errores de cada
+> modelo, y no debe leerse como que un método domina al otro en términos
+> absolutos. Ningún benchmark de volatilidad probado —ni el más simple
+> (naive plano) ni los dos que sí modelan agrupamiento de volatilidad
+> (GARCH, EWMA)— mejora sobre predecir varianza constante en este dataset,
+> en ninguna de las dos métricas.
 
 **Fecha:** 5 de septiembre de 2026
 **Módulos:** `models/statistical/garch.py`, `models/statistical/garch_runner.py`
