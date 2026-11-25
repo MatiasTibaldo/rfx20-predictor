@@ -88,7 +88,7 @@ MODEL_REGISTRY: list[ModelSpec] = [
         path_template=str(TRACK_B_DIR / "cnn_lstm_val_predictions_h{h}.parquet"),
     ),
     ModelSpec(
-        "tft_lite", "TFT-lite", TRACK_B_DL, "narrow",
+        "tft_lite", "Transformer encoder", TRACK_B_DL, "narrow",
         path_template=str(TRACK_B_DIR / "tft_lite_val_predictions_h{h}.parquet"),
     ),
 ]
