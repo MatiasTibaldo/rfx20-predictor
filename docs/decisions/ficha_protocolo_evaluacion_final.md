@@ -37,6 +37,16 @@ GARCH(1,1) t-Student; hiperparámetros de los 4 modelos de ML elegidos por
 `RandomizedSearchCV` sobre train; *lookback* de cada red elegido por
 *early stopping*, nunca sobre val).
 
+**Aclaración sobre el dataset**: los tres feature sets de la tabla anterior
+se materializan sobre **`features_long.parquet`** (el dataset baseline, con
+la composición original del índice) — no sobre las variantes de composición
+alternativa evaluadas en el Punto 5 (`features_long_compA`,
+`features_long_compC_masked`). Esas variantes fueron una exploración
+puntual que no mejoró el desempeño de ningún modelo oficial (y resultó no
+útil para Deep Learning, ver `docs/decisions/punto5_variantes_componentes_nov2026.md`)
+y quedaron descartadas — los 10 modelos oficiales de esta ficha nunca las
+usaron ni las usarán.
+
 ## 3. Política de actualización por familia durante el período de test
 
 **ARIMA y GARCH** continúan el mismo walk-forward diario que ya corre sobre
